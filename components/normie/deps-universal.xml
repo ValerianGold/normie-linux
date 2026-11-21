@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Normie Linux: universal-support dependencies (profile: NormieFull).
+
+  Goal: a user downloads a popular app and it just works. Rules used to pick these
+  (full version in docs/DEPENDENCY-POLICY.md):
+    1. Libraries and tools that sit BESIDE existing packages (new sonames, new files).
+    2. Only from Fedora's own repos here, so the build needs no extra repository.
+    3. Nothing that REPLACES a Fedora package (those are swaps and need a decision).
+    4. Everything is verified by tools/check-packages.py (names exist) and
+       tools/solve-check.py (no conflicts) BEFORE a build.
+
+  Each group is labeled SAFE (purely additive) or MODERATE (compat packages whose names or
+  availability change between Fedora releases). If a group causes trouble, delete just that group.
+
+  DELIBERATELY NOT HERE, because they conflict or need a decision (docs/DECISIONS.md):
+    ffmpeg, ffmpeg-libs        replaces Fedora's ffmpeg-free libraries (D-7)
+    mesa-*-freeworld           replaces Fedora's Mesa codec drivers (D-7)
+    steam, unrar, NVIDIA       need the RPM Fusion nonfree repository (D-5, D-8)
+    Google Chrome              needs Google's repository (D-9)
+-->
+<image>
+
+	<!-- ===== Electron / Chromium-style app libraries (64-bit) [SAFE] =====
+	     Most popular desktop apps (Discord, Slack, VS Code, Teams, and many launchers) are
+	     Electron or Chromium based and need this common set. Purely additive libraries.
+	-->
+	<packages type="image" patternType="plusRecommended" profiles="NormieFull">
+		<package name="nspr"/>
+		<package name="atk"/>
+		<package name="at-spi2-atk"/>
+		<package name="at-spi2-core"/>
+		<package name="cups-libs"/>
+		<package name="libdrm"/>
+		<package name="libxkbcommon"/>
+		<package name="libXcomposite"/>
+		<package name="libXdamage"/>
+		<package name="libXrandr"/>
+		<package name="libXScrnSaver"/>
+		<package name="libXfixes"/>
+		<package name="libXext"/>
+		<package name="mesa-libgbm"/>
+		<package name="pango"/>
+		<package name="cairo"/>
+		<package name="libnotify"/>
+		<package name="libsecret"/>
+		<package name="xdg-utils"/>
+		<package name="libappindicator-gtk3"/>
+		<package name="xdg-desktop-portal-gtk"/>
+		<package name="libxshmfence"/>
+	</packages>
+
+	<!-- ===== Windows-network and file sharing [SAFE] =====
+	     For people moving from Windows: SMB shares, printers and PCs found by name.
+	-->
+	<packages type="image" patternType="plusRecommended" profiles="NormieFull">
+		<package name="samba-client"/>
+		<package name="cifs-utils"/>
+		<package name="nss-mdns"/>
+	</packages>
+
+	<!-- ===== Drives, phones and cameras [SAFE] =====
+	     NTFS/exFAT drives from Windows, Android (MTP) and iPhone access.
+	-->
+	<packages type="image" patternType="plusRecommended" profiles="NormieFull">
+		<package name="ntfs-3g"/>
+		<package name="ntfsprogs"/>
+		<package name="exfatprogs"/>
+		<package name="dosfstools"/>
+		<package name="udftools"/>
+		<package name="libmtp"/>
+		<package name="libimobiledevice"/>
+		<package name="usbmuxd"/>
+		<package name="ifuse"/>
+	</packages>
+
+	<!-- ===== Archives [SAFE] =====
+	     unar opens RAR files without the nonfree unrar. If the checker says 7zip does not
+	     exist, try p7zip and p7zip-plugins (the package was renamed around Fedora 41/42).
+	-->
+	<packages type="image" patternType="plusRecommended" profiles="NormieFull">
+		<package name="zip"/>
+		<package name="bzip2"/>
+		<package name="cabextract"/>
+		<package name="unar"/>
+		<package name="7zip"/>
+	</packages>
+
+	<!-- ===== Fonts (documents look right) [SAFE] =====
+	     Metric-compatible replacements for Arial/Times/Courier (liberation), Calibri (carlito)
+	     and Cambria (caladea), plus CJK and emoji. Microsoft's own fonts cannot be bundled.
+	-->
+	<packages type="image" patternType="plusRecommended" profiles="NormieFull">
+		<package name="liberation-fonts"/>
+		<package name="google-carlito-fonts"/>
+		<package name="google-caladea-fonts"/>
+		<package name="dejavu-sans-fonts"/>
+		<package name="google-noto-sans-cjk-fonts"/>
+		<package name="google-noto-color-emoji-fonts"/>
+	</packages>
+
+	<!-- ===== Printing and scanning [SAFE] =====
+	     Most modern printers work driverless; hplip, gutenprint and sane cover the rest.
+	-->
+	<packages type="image" patternType="plusRecommended" profiles="NormieFull">
+		<package name="cups"/>
+		<package name="cups-filters"/>
+		<package name="hplip"/>
+		<package name="gutenprint-cups"/>
+		<package name="sane-backends-drivers-scanners"/>
+		<package name="sane-airscan"/>
+		<package name="ipp-usb"/>
+	</packages>
+
+	<!-- ===== Gaming, controllers and Windows-game tooling [SAFE] =====
+	     game-devices-udev makes common controllers work. winetricks and wine-mono are the
+	     standard Wine helpers. vkd3d is Direct3D 12 for Wine.
+	-->
+	<packages type="image" patternType="plusRecommended" profiles="NormieFull">
+		<package name="game-devices-udev"/>
+		<package name="gamemode"/>
+		<package name="gamemode.i686"/>
+		<package name="mangohud"/>
+		<package name="mangohud.i686"/>
+		<package name="vulkan-tools"/>
+		<package name="winetricks"/>
+		<package name="wine-mono"/>
+		<package name="vkd3d"/>
+		<package name="vkd3d.i686"/>
+		<package name="libusb1"/>
+		<package name="libusb1.i686"/>
+	</packages>
+
+	<!-- ===== 32-bit audio (a classic gap for old games and Wine) [SAFE] =====
+	     32-bit programs reach PipeWire through the PulseAudio and ALSA compatibility libraries.
+	-->
+	<packages type="image" patternType="plusRecommended" profiles="NormieFull">
+		<package name="alsa-plugins-pulseaudio"/>
+		<package name="alsa-plugins-pulseaudio.i686"/>
+		<package name="pipewire-pulseaudio"/>
+		<package name="pipewire-alsa"/>
+		<package name="pipewire-jack-audio-connection-kit"/>
+	</packages>
+
+	<!-- ===== Older programs (compatibility libraries) [MODERATE] =====
+	     For old binaries that expect libraries Fedora no longer ships by default. These are
+	     compat packages designed to coexist. Names change between releases: run the checker.
+	-->
+	<packages type="image" patternType="plusRecommended" profiles="NormieFull">
+		<package name="libxcrypt-compat"/>
+		<package name="libxcrypt-compat.i686"/>
+		<package name="ncurses-compat-libs"/>
+		<package name="ncurses-compat-libs.i686"/>
+		<package name="compat-openssl11"/>
+		<package name="compat-openssl11.i686"/>
+	</packages>
+
+	<!-- ===== Extra runtimes, side by side [MODERATE] =====
+	     Apps pin to specific runtimes: Minecraft and many launchers want Java 17 or 21,
+	     very old apps want Java 8, and .NET apps pin to 8 or 9. Java uses the alternatives
+	     system and .NET installs side by side, so these coexist with the versions above.
+	-->
+	<packages type="image" patternType="plusRecommended" profiles="NormieFull">
+		<package name="java-21-openjdk"/>
+		<package name="java-17-openjdk"/>
+		<package name="java-1.8.0-openjdk"/>
+		<package name="dotnet-runtime-8.0"/>
+		<package name="dotnet-runtime-9.0"/>
+		<package name="mono-core"/>
+	</packages>
+
+	<!-- ===== Software manager and firmware [SAFE] =====
+	     Needed so users can install apps (for example Chrome) from the software center.
+	     This installs the Flatpak support; the Flathub repository itself is configured
+	     separately (see docs/ROADMAP.md M2).
+	-->
+	<packages type="image" patternType="plusRecommended" profiles="NormieFull">
+		<package name="flatpak"/>
+		<package name="plasma-discover-flatpak"/>
+		<package name="fwupd"/>
+		<package name="alsa-sof-firmware"/>
+	</packages>
+</image>

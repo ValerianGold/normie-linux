@@ -71,7 +71,15 @@ mkdir -p ~/normie-linux-out
 python3 tools/check-packages.py 2>&1 | tee ~/normie-linux-out/preflight.txt
 ```
 
-Paste me `preflight.txt`. We fix every name it lists, then:
+Paste me `preflight.txt`. We fix every name it lists. Then check that everything can be installed
+**together** (names existing is not enough). Run the control first, to prove the tool works on your machine:
+
+```
+sudo python3 tools/solve-check.py Normie-Live        # known-good base: should say OK
+sudo python3 tools/solve-check.py                    # the full set
+```
+
+Paste me any PROBLEMS output. Only when both are clean:
 
 ```
 tools/build.sh Normie-Full-Live

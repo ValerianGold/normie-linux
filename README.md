@@ -38,7 +38,7 @@ tools/build.sh                      # builds the Normie-Live ISO (Milestone 1)
 | `Normie-Linux.kiwi` | The Normie Linux image description. Start reading here. |
 | `components/normie/` | Our own KIWI files: `profiles.xml` (what can be built) and `deps.xml` (dependency set). |
 | `repositories/rpmfusion.xml` | RPM Fusion repositories (ours). `core.xml` is Fedora's. |
-| `tools/` | `build.sh`, `validate-kiwi.py`, `check-packages.py`. |
+| `tools/` | `build.sh`, `validate-kiwi.py`, `check-packages.py`, `solve-check.py`. |
 | `docs/` | Start-here guide, roadmap, design decisions, list of changes to Fedora's files. |
 | everything else | Fedora's KIWI descriptions, kept unmodified where possible so upstream updates merge cleanly. See [docs/UPSTREAM-CHANGES.md](docs/UPSTREAM-CHANGES.md). |
 

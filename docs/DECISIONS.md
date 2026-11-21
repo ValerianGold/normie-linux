@@ -50,7 +50,9 @@ Fedora 45 to 46 upgrades should be a separate, confirmed step.
 to get full codecs is RPM Fusion's `ffmpeg` (swapping out Fedora's `ffmpeg-free`), which
 conflicts with them; an alternative is RPM Fusion's `libavcodec-freeworld`, which adds codecs to
 Fedora's libraries instead. Which approach (and whether 32-bit versions exist) has to be
-settled by testing in M2.
+settled by testing in M2. Related: the list also has `mesa-va-drivers-freeworld.i686` without a 64-bit
+counterpart; a consistent system swaps both. `tools/solve-check.py` will show whether the current mix conflicts.
+The general rules for avoiding conflicts are in `DEPENDENCY-POLICY.md`.
 
 ## D-8 Distribution: OPEN
 - Source goes on GitHub. ISOs probably cannot: as far as I know GitHub release files are

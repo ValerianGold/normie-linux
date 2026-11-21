@@ -130,6 +130,7 @@
 		<package name="mesa-dri-drivers.i686"/>
 		<package name="mesa-vulkan-drivers.i686"/>
 		<package name="mesa-vulkan-drivers"/>
+		<!-- CONFLICT CANDIDATE (D-7): freeworld Mesa replaces Fedora's mesa-va-drivers, and only the 32-bit half is listed. A consistent system swaps BOTH architectures. tools/solve-check.py will show whether this conflicts. -->
 		<package name="mesa-va-drivers-freeworld.i686"/>
 		<package name="vulkan-loader.i686"/>
 		<package name="vulkan-loader"/>
@@ -176,6 +177,7 @@
 		<package name="gstreamer1-plugins-bad-free.i686"/>
 		<package name="gstreamer1-plugins-bad-freeworld.i686"/>
 		<package name="gstreamer1-plugins-ugly-free.i686"/>
+		<!-- CONFLICT CANDIDATES (D-7): Fedora's limited ffmpeg libraries. Fine on their own, but they block RPM Fusion's full ffmpeg if we choose that route. -->
 		<package name="libavcodec-free.i686"/>
 		<package name="libavformat-free.i686"/>
 		<package name="libavutil-free.i686"/>

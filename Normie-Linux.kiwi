@@ -44,6 +44,7 @@
 	<!-- Normie Linux additions -->
 	<include from="this://./components/normie/profiles.xml"/>
 	<include from="this://./components/normie/deps.xml"/>
+	<include from="this://./components/normie/deps-universal.xml"/>
 
 	<packages type="bootstrap">
 		<package name="filesystem"/>
