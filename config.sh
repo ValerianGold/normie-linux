@@ -14,6 +14,19 @@ test -f /.profile && . /.profile
 echo "Configure image: [$kiwi_iname]-[$kiwi_profiles]..."
 
 #======================================
+# NORMIE-LINUX CHANGE: profile compatibility
+#--------------------------------------
+## The checks below match substrings of $kiwi_profiles (e.g. "KDE", "Desktop",
+## "Live") to decide the live session and default boot target. Normie profiles
+## are built on KDE-Desktop-Live, so make sure those substrings are always
+## present, whether or not kiwi expands required profiles into this variable.
+## Without this a Normie ISO could boot to a text console instead of KDE.
+if [[ "$kiwi_profiles" == *"Normie"* ]]; then
+	kiwi_profiles="$kiwi_profiles,KDE-Desktop-Live,KDE-Desktop"
+	echo "Normie profile detected, effective profiles: [$kiwi_profiles]"
+fi
+
+#======================================
 # Set SELinux booleans
 #--------------------------------------
 if [[ "$kiwi_profiles" != *"Container"* ]] && [[ "$kiwi_profiles" != *"FEX"* ]] && [[ "$kiwi_profiles" != *"WSL"* ]]; then

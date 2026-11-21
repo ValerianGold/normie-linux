@@ -1,54 +1,47 @@
+# Normie Linux
 
-# Fedora KIWI image descriptions
+A beginner-friendly Linux distribution, based on Fedora, built so that ordinary
+users never have to open a terminal.
 
-This project is used to manage the Fedora KIWI image descriptions used in composing Fedora release images.
+> **Status: early development.** The project currently builds a Fedora 45 KDE
+> live ISO under the Normie name (Milestone 1). The features below are the
+> goals; see [docs/ROADMAP.md](docs/ROADMAP.md) for what exists today.
 
-The `rawhide` branch is used for Fedora Rawhide images and each release branch is used by that release.
+## Goals
 
-All changes should be made via the PR workflow.
+- **No terminal, ever.** Every common task has a graphical path, including fixing things that break.
+- **One "Update & Repair" button.** Runs a full system upgrade with no questions asked, keeps common dependencies installed and current, and rolls back automatically if something goes wrong.
+- **Runs the software people actually use**, including older programs and 32-bit applications, and Windows programs through Wine.
+- **Dependency-complete.** We would rather ship a few libraries too many than make a user hunt for a missing one. Size optimization matters, but completeness wins.
+- **Graphics drivers handled automatically**, including NVIDIA, as part of first setup.
+- **Fedora underneath.** Updates come from Fedora's repositories (plus RPM Fusion and our own), but this is an independent project.
 
-## Image variants
+## Not affiliated with Fedora
 
-Please look at [`VARIANTS`](VARIANTS.md) for details on the available
-configurations that can be built.
+Normie Linux is an independent project. It is not endorsed by or affiliated with
+the Fedora Project or Red Hat. See [NOTICE.md](NOTICE.md).
 
-## Image build quickstart
+## Building
 
-This is generally tested and expected to run on the latest stable release of Fedora Linux.
-Other distributions may work, but there are no guarantees.
+Start with [docs/START-HERE.md](docs/START-HERE.md). In short, on a Fedora 45 machine
+with KIWI installed:
 
-Set up your development environment and run the image build (substitute `<image_type>` and `<image_profile>` for the appropriate settings):
-
-```bash
-# Install kiwi
-[]$ sudo dnf --assumeyes install kiwi kiwi-systemdeps distribution-gpg-keys
-# Run the image build
-[]$ sudo ./kiwi-build --kiwi-file=Fedora.kiwi --image-type=<image_type> --image-profile=<image_profile> --output-dir ./outdir
+```
+python3 tools/validate-kiwi.py      # fast structural check, no root needed
+tools/build.sh                      # builds the Normie-Live ISO (Milestone 1)
 ```
 
-## CI information
+## Repository layout
 
-This project is tested using the [Software Factory Zuul CI instance](https://fedora.softwarefactory-project.io/zuul/project/pagure.io/fedora-kiwi-descriptions)
-using the [Test Management Tool](https://tmt.readthedocs.io/).
+| Path | What it is |
+|---|---|
+| `Normie-Linux.kiwi` | The Normie Linux image description. Start reading here. |
+| `components/normie/` | Our own KIWI files: `profiles.xml` (what can be built) and `deps.xml` (dependency set). |
+| `repositories/rpmfusion.xml` | RPM Fusion repositories (ours). `core.xml` is Fedora's. |
+| `tools/` | `build.sh`, `validate-kiwi.py`, `check-packages.py`. |
+| `docs/` | Start-here guide, roadmap, design decisions, list of changes to Fedora's files. |
+| everything else | Fedora's KIWI descriptions, kept unmodified where possible so upstream updates merge cleanly. See [docs/UPSTREAM-CHANGES.md](docs/UPSTREAM-CHANGES.md). |
 
-The Zuul configuration is generated from the Jinja2 template `.zuul.yaml.j2`.
-When adding or removing a tmt plan, please run the following command to regenerate the Zuul configuration:
+## License
 
-```bash
-[]$ make generate-zuul-config
-```
-
-## Licensing
-
-This is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, under version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program. If not, see <http://www.gnu.org/licenses/>.
+GPL-3.0-or-later, inherited from the Fedora KIWI descriptions this project builds on. See `COPYING`.

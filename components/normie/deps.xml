@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Normie Linux dependency set (profile: NormieFull).
+
+  STATUS: carried over unchanged from the first prototype. NOT YET VERIFIED.
+  Before building Normie-Full-Live, run on the build host:
+      python3 tools/check-packages.py
+  One non-existent package name fails the whole build, so fix every name it
+  reports first. Open questions about these lists are tracked in docs/DECISIONS.md.
+
+  Long-term plan: this list moves into an installed RPM metapackage
+  ("normie-deps") so the Update & Repair button can keep dependencies
+  current after install. The XML here then shrinks to a few package names.
+-->
+<image>
+
+	<!-- ===== Core libraries and AppImage support (64-bit) =====
+	     fuse-libs provides libfuse.so.2, which AppImages need.
+	-->
+	<packages type="image" patternType="plusRecommended" profiles="NormieFull">
+		<package name="openssl"/>
+		<package name="openssl-libs"/>
+		<package name="gnutls"/>
+		<package name="dbus"/>
+		<package name="dbus-libs"/>
+		<package name="fuse"/>
+		<package name="fuse-libs"/>
+	</packages>
+
+	<!-- ===== Build tools and -devel headers (64-bit) =====
+	     Added for Xodus Nexus. Which of these it REALLY needs at runtime is still
+	     unknown - see docs/DECISIONS.md D-4. Kept on purpose (completeness over size).
+	-->
+	<packages type="image" patternType="plusRecommended" profiles="NormieFull">
+		<package name="gcc"/>
+		<package name="gcc-c++"/>
+		<package name="make"/>
+		<package name="cmake"/>
+		<package name="openssl-devel"/>
+		<package name="dbus-devel"/>
+		<package name="pkgconf-pkg-config"/>
+	</packages>
+
+	<!-- ===== 32-bit (i686) compatibility libraries =====
+	     Fedora kept multilib support (the proposal to drop it was withdrawn in 2025),
+	     but it may return in a later release. These are the packages most likely to
+	     disappear or be renamed: re-run tools/check-packages.py on every Fedora release.
+	     See docs/DECISIONS.md D-7 about the libavcodec-free / RPM Fusion ffmpeg question.
+	-->
+	<packages type="image" patternType="plusRecommended" profiles="NormieFull">
+		<package name="glibc.i686"/>
+		<package name="libgcc.i686"/>
+		<package name="libstdc++.i686"/>
+		<package name="libatomic.i686"/>
+		<package name="libgomp.i686"/>
+		<package name="zlib-ng-compat.i686"/>
+		<package name="bzip2-libs.i686"/>
+		<package name="xz-libs.i686"/>
+		<package name="libzstd.i686"/>
+		<package name="openssl-libs.i686"/>
+		<package name="gnutls.i686"/>
+		<package name="nettle.i686"/>
+		<package name="libffi.i686"/>
+		<package name="libidn2.i686"/>
+		<package name="libtasn1.i686"/>
+		<package name="p11-kit.i686"/>
+		<package name="libunistring.i686"/>
+		<package name="krb5-libs.i686"/>
+		<package name="libcurl.i686"/>
+		<package name="libssh.i686"/>
+		<package name="libssh2.i686"/>
+		<package name="libnghttp2.i686"/>
+		<package name="libpsl.i686"/>
+		<package name="dbus-libs.i686"/>
+		<package name="systemd-libs.i686"/>
+		<package name="libcap.i686"/>
+		<package name="libacl.i686"/>
+		<package name="libattr.i686"/>
+		<package name="libselinux.i686"/>
+		<package name="libsepol.i686"/>
+		<package name="libmount.i686"/>
+		<package name="libblkid.i686"/>
+		<package name="libxcrypt.i686"/>
+		<package name="ncurses-libs.i686"/>
+		<package name="readline.i686"/>
+		<package name="libedit.i686"/>
+		<package name="libevent.i686"/>
+		<package name="libuv.i686"/>
+		<package name="libarchive.i686"/>
+		<package name="json-c.i686"/>
+		<package name="libyaml.i686"/>
+		<package name="yaml-cpp.i686"/>
+		<package name="libxml2.i686"/>
+		<package name="libxslt.i686"/>
+		<package name="expat.i686"/>
+		<package name="sqlite-libs.i686"/>
+		<package name="glib2.i686"/>
+		<package name="gtk3.i686"/>
+		<package name="gtk4.i686"/>
+		<package name="libadwaita.i686"/>
+		<package name="qt5-qtbase.i686"/>
+		<package name="qt6-qtbase.i686"/>
+		<package name="libicu.i686"/>
+		<package name="fontconfig.i686"/>
+		<package name="freetype.i686"/>
+		<package name="libX11.i686"/>
+		<package name="libXau.i686"/>
+		<package name="libXdmcp.i686"/>
+		<package name="libXext.i686"/>
+		<package name="libXrender.i686"/>
+		<package name="libXrandr.i686"/>
+		<package name="libXi.i686"/>
+		<package name="libXcursor.i686"/>
+		<package name="libXinerama.i686"/>
+		<package name="libXfixes.i686"/>
+		<package name="libXdamage.i686"/>
+		<package name="libXcomposite.i686"/>
+		<package name="libxcb.i686"/>
+		<package name="libxkbcommon.i686"/>
+		<package name="libxkbcommon-x11.i686"/>
+		<package name="libXxf86vm.i686"/>
+		<package name="libXxf86dga.i686"/>
+		<package name="libXxf86misc.i686"/>
+		<package name="libXmu.i686"/>
+		<package name="libXt.i686"/>
+		<package name="libXtst.i686"/>
+		<package name="libXScrnSaver.i686"/>
+		<package name="libepoxy.i686"/>
+		<package name="libdrm.i686"/>
+		<package name="mesa-dri-drivers.i686"/>
+		<package name="mesa-vulkan-drivers.i686"/>
+		<package name="mesa-vulkan-drivers"/>
+		<package name="mesa-va-drivers-freeworld.i686"/>
+		<package name="vulkan-loader.i686"/>
+		<package name="vulkan-loader"/>
+		<package name="libva.i686"/>
+		<package name="mesa-libEGL.i686"/>
+		<package name="mesa-libGL.i686"/>
+		<package name="mesa-libGLU.i686"/>
+		<package name="mesa-libgbm.i686"/>
+		<package name="libglvnd.i686"/>
+		<package name="libglvnd-egl.i686"/>
+		<package name="libglvnd-gles.i686"/>
+		<package name="libglvnd-glx.i686"/>
+		<package name="libglvnd-opengl.i686"/>
+		<package name="alsa-lib.i686"/>
+		<package name="pulseaudio-libs.i686"/>
+		<package name="pipewire-libs.i686"/>
+		<package name="openal-soft.i686"/>
+		<package name="opus.i686"/>
+		<package name="libogg.i686"/>
+		<package name="libvorbis.i686"/>
+		<package name="flac.i686"/>
+		<package name="libsndfile.i686"/>
+		<package name="libsamplerate.i686"/>
+		<package name="libasyncns.i686"/>
+		<package name="sdl12-compat.i686"/>
+		<package name="sdl2-compat.i686"/>
+		<package name="SDL2_image.i686"/>
+		<package name="SDL2_mixer.i686"/>
+		<package name="SDL2_net.i686"/>
+		<package name="SDL2_sound.i686"/>
+		<package name="SDL2_ttf.i686"/>
+		<package name="SDL3.i686"/>
+		<package name="SDL3_image.i686"/>
+		<package name="SDL3_mixer.i686"/>
+		<package name="SDL3_net.i686"/>
+		<package name="SDL3_sound.i686"/>
+		<package name="SDL3_ttf.i686"/>
+		<package name="gstreamer1-plugins-base.i686"/>
+		<package name="gstreamer1-plugins-good.i686"/>
+		<package name="gstreamer1-plugins-good-extras.i686"/>
+		<package name="gstreamer1-plugins-good-gtk.i686"/>
+		<package name="gstreamer1-plugins-good-qt.i686"/>
+		<package name="gstreamer1-plugins-good-qt6.i686"/>
+		<package name="gstreamer1-plugins-bad-free.i686"/>
+		<package name="gstreamer1-plugins-bad-freeworld.i686"/>
+		<package name="gstreamer1-plugins-ugly-free.i686"/>
+		<package name="libavcodec-free.i686"/>
+		<package name="libavformat-free.i686"/>
+		<package name="libavutil-free.i686"/>
+		<package name="libswscale-free.i686"/>
+		<package name="libswresample-free.i686"/>
+		<package name="libtheora.i686"/>
+		<package name="libvpx.i686"/>
+		<package name="libwebp.i686"/>
+		<package name="libjpeg-turbo.i686"/>
+		<package name="libpng.i686"/>
+		<package name="libtiff.i686"/>
+	</packages>
+
+	<!-- ===== Windows application support (Wine) =====
+	-->
+	<packages type="image" patternType="plusRecommended" profiles="NormieFull">
+		<package name="wine"/>
+		<package name="wine.i686"/>
+		<package name="wine-alsa"/>
+		<package name="wine-alsa.i686"/>
+		<package name="wine-dxvk"/>
+		<package name="wine-dxvk-d3d8"/>
+		<package name="wine-dxvk-d3d9"/>
+		<package name="wine-dxvk-d3d10"/>
+		<package name="wine-dxvk-dxgi"/>
+	</packages>
+
+	<!-- ===== Language runtimes and SDKs =====
+	     Runtimes are for programs that need them. The SDKs/compilers (dotnet-sdk,
+	     rust, cargo, golang, nodejs) were added for Xodus Nexus - see D-4.
+	-->
+	<packages type="image" patternType="plusRecommended" profiles="NormieFull">
+		<package name="python3"/>
+		<package name="python3-pip"/>
+		<package name="python3-virtualenv"/>
+		<package name="java-25-openjdk"/>
+		<package name="dotnet-runtime-10.0"/>
+		<package name="aspnetcore-runtime-10.0"/>
+		<package name="dotnet-sdk-10.0"/>
+		<package name="rust"/>
+		<package name="cargo"/>
+		<package name="nodejs"/>
+		<package name="nodejs-npm"/>
+		<package name="golang"/>
+	</packages>
+</image>

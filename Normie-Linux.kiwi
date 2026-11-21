@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+  Normie Linux - image description (KIWI)
+
+  This file is deliberately SMALL. It pulls in only the Fedora building blocks
+  that a KDE live ISO needs, plus our own files under components/normie/.
+  Everything inherited from Fedora lives in the original Fedora files, which
+  are left untouched so upstream fixes can be merged in. See docs/UPSTREAM-CHANGES.md.
+
+  Profiles you can build (see components/normie/profiles.xml):
+    Normie-Live        Milestone 1: Fedora 45 KDE live ISO under the Normie name.
+    Normie-Full-Live   Milestone 2: adds RPM Fusion + the full dependency set.
+-->
+<image schemaversion="7.4" name="Normie-Linux">
+	<description type="system">
+		<author>Normie Linux contributors</author>
+		<contact>TODO-set-project-contact-before-publishing</contact>
+		<specification>Normie Linux, a beginner-friendly distribution based on Fedora Linux</specification>
+	</description>
+	<preferences>
+		<version>45</version>
+		<packagemanager>dnf5</packagemanager>
+		<locale>en_US</locale>
+		<keytable>us</keytable>
+		<timezone>UTC</timezone>
+		<release-version>45</release-version>
+	</preferences>
+
+	<!-- Repositories -->
+	<include from="this://./repositories/core.xml"/>
+	<include from="this://./repositories/rpmfusion.xml"/>
+
+	<!-- Fedora building blocks needed for a KDE live ISO (unmodified) -->
+	<include from="this://./components/common.xml"/>
+	<include from="this://./components/boot.xml"/>
+	<include from="this://./components/desktops/common.xml"/>
+	<include from="this://./components/desktops/kde.xml"/>
+	<include from="this://./components/liveinstall.xml"/>
+	<include from="this://./components/users.xml"/>
+	<include from="this://./teams/base.xml"/>
+	<include from="this://./teams/kde.xml"/>
+
+	<!-- Normie Linux additions -->
+	<include from="this://./components/normie/profiles.xml"/>
+	<include from="this://./components/normie/deps.xml"/>
+
+	<packages type="bootstrap">
+		<package name="filesystem"/>
+	</packages>
+</image>

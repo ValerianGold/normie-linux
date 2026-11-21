@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  RPM Fusion repositories, used ONLY by the NormieFull profile (so the
+  Milestone 1 build is pure Fedora).
+
+  Signing keys are read from the BUILD HOST, from the distribution-gpg-keys
+  package. If a build fails with "Couldn't read a file:// file", the host's
+  distribution-gpg-keys is too old to contain the key for this Fedora release:
+      sudo dnf upgrade distribution-gpg-keys
+  tools/check-packages.py checks that these key files exist before you build.
+
+  NOTE: this only configures repos for building the ISO. Getting the repos
+  onto the INSTALLED system (so updates keep coming) is a Milestone 2 task,
+  see docs/ROADMAP.md.
+-->
+<image>
+	<repository type="rpm-md" alias="rpmfusion-free" sourcetype="metalink" profiles="NormieFull">
+		<source path="https://mirrors.rpmfusion.org/metalink?repo=free-fedora-$releasever&amp;arch=$basearch">
+			<signing key="file:///usr/share/distribution-gpg-keys/rpmfusion/RPM-GPG-KEY-rpmfusion-free-fedora-$releasever"/>
+		</source>
+	</repository>
+	<repository type="rpm-md" alias="rpmfusion-free-updates" sourcetype="metalink" profiles="NormieFull">
+		<source path="https://mirrors.rpmfusion.org/metalink?repo=free-fedora-updates-released-$releasever&amp;arch=$basearch">
+			<signing key="file:///usr/share/distribution-gpg-keys/rpmfusion/RPM-GPG-KEY-rpmfusion-free-fedora-$releasever"/>
+		</source>
+	</repository>
+
+	<!-- Milestone 5 (NVIDIA): uncomment when the driver work starts.
+	<repository type="rpm-md" alias="rpmfusion-nonfree" sourcetype="metalink" profiles="NormieFull">
+		<source path="https://mirrors.rpmfusion.org/metalink?repo=nonfree-fedora-$releasever&amp;arch=$basearch">
+			<signing key="file:///usr/share/distribution-gpg-keys/rpmfusion/RPM-GPG-KEY-rpmfusion-nonfree-fedora-$releasever"/>
+		</source>
+	</repository>
+	<repository type="rpm-md" alias="rpmfusion-nonfree-updates" sourcetype="metalink" profiles="NormieFull">
+		<source path="https://mirrors.rpmfusion.org/metalink?repo=nonfree-fedora-updates-released-$releasever&amp;arch=$basearch">
+			<signing key="file:///usr/share/distribution-gpg-keys/rpmfusion/RPM-GPG-KEY-rpmfusion-nonfree-fedora-$releasever"/>
+		</source>
+	</repository>
+	-->
+</image>

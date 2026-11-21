@@ -1,2 +1,8 @@
 outdir-build/
 outdir/
+
+# Normie Linux: build output must never live in the repo
+*.iso
+*.sha256
+normie-linux-out/
+*.log

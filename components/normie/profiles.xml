@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Normie Linux profiles.
+
+  Naming rule: ISO profiles must end in "-Live" and start with "Normie".
+  scripts/fedora-live-iso-label-generator turns the name into the ISO volume
+  label (max 32 characters), e.g. Normie-Full-Live -> "Normie-Linux-Full-Live-45".
+-->
+<image>
+	<profiles>
+		<!-- Internal building block (not built on its own): RPM Fusion + dependency set -->
+		<profile name="NormieFull" description="Normie Linux: RPM Fusion repositories plus the full dependency set"/>
+
+		<!-- Milestone 1: proves the new repo builds. Same content as Fedora KDE. -->
+		<profile name="Normie-Live" description="Normie Linux live ISO (Fedora 45 KDE base)">
+			<requires profile="KDE-Desktop-Live"/>
+		</profile>
+
+		<!-- Milestone 2: the real target. DO NOT build until tools/check-packages.py passes. -->
+		<profile name="Normie-Full-Live" description="Normie Linux live ISO with RPM Fusion and full dependency set">
+			<requires profile="Normie-Live"/>
+			<requires profile="NormieFull"/>
+		</profile>
+	</profiles>
+</image>

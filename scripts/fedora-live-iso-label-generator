@@ -103,6 +103,15 @@ else:
 image_appid = f"{image_basename}-{image_profile_variant_appid_prefix}-Live-{image_version}"
 image_volid = f"{image_basename}-{image_profile_variant_volid_prefix}-Live-{image_volid_version}"
 
+# NORMIE-LINUX CHANGE: profiles named Normie-Live / Normie-<Variant>-Live get
+# short labels like "Normie-Linux-Live-45" and "Normie-Linux-Full-Live-45"
+# instead of repeating the word Normie. (Volume IDs are limited to 32 chars.)
+if image_profile_baseprefix == "Normie" or image_profile_baseprefix.startswith("Normie-"):
+	_variant = image_profile_baseprefix[len("Normie"):].strip("-")
+	_mid = f"-{_variant}" if _variant else ""
+	image_appid = f"{image_basename}{_mid}-Live-{image_version}"
+	image_volid = f"{image_basename}{_mid}-Live-{image_volid_version}"
+
 if args.output_kiwi_args:
 	print(f"--set-type-attr=application_id={image_appid} --set-type-attr=volid={image_volid}")
 else:
