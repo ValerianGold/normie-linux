@@ -189,6 +189,28 @@
 		<package name="libtiff.i686"/>
 	</packages>
 
+	<!-- ===== App prerequisites: Xodus Nexus =====
+	     Policy: we ship an app's DEPENDENCIES, never the app itself (it updates too fast).
+	     Evidence and sources for every line are in docs/APP-DEPENDENCIES.md.
+	     From the project's own install.sh (Fedora branch): curl tar xz fuse webkit2gtk4.1
+	       gtk3 nss libXtst alsa-lib desktop-file-utils  (fuse is already listed above).
+	     From the field report: msitools unzip curl (used by the Visual C++ repair workaround).
+	     NOT included here: Google Chrome. See docs/DECISIONS.md D-9.
+	-->
+	<packages type="image" patternType="plusRecommended" profiles="NormieFull">
+		<package name="curl"/>
+		<package name="tar"/>
+		<package name="xz"/>
+		<package name="webkit2gtk4.1"/>
+		<package name="gtk3"/>
+		<package name="nss"/>
+		<package name="libXtst"/>
+		<package name="alsa-lib"/>
+		<package name="desktop-file-utils"/>
+		<package name="msitools"/>
+		<package name="unzip"/>
+	</packages>
+
 	<!-- ===== Windows application support (Wine) =====
 	-->
 	<packages type="image" patternType="plusRecommended" profiles="NormieFull">

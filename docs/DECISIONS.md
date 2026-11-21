@@ -17,11 +17,15 @@ A list in a KIWI file only affects the ISO at build time. For Update & Repair to
 keep dependencies current, the list must exist inside the installed system:
 an RPM `normie-deps` that `Requires:` everything. Planned for M3.
 
-## D-4 Xodus Nexus requirements: OPEN
-Xodus Nexus is a program the distro must run out of the box. The compilers,
-`-devel` packages, and SDKs in `deps.xml` were added for it, but which ones it
-truly needs is unknown. Needed: its install/run instructions. Until then
-everything stays in (completeness over size).
+## D-4 Application dependency policy and Xodus Nexus: DECIDED
+**Policy:** Normie Linux ships the *dependencies* popular apps need, not the apps. Anything a
+user downloads should then work with no extra steps. Size is a secondary concern.
+
+For Xodus Nexus the requirements are now documented in `docs/APP-DEPENDENCIES.md`, from two sources:
+the project's own installer script and a field report of a Fedora 44 setup. Result: the prototype list
+already covered almost everything; `deps.xml` gained a small labeled group. The compilers and `-devel`
+packages from the field report are *not* required by the official installer (it states a compiler is not
+needed for the prebuilt backend), but they stay in under the completeness policy and are harmless.
 
 ## D-5 NVIDIA at first boot: PROPOSED
 - A one-time service on the installed system detects the GPU, picks the right driver
@@ -53,3 +57,11 @@ settled by testing in M2.
   capped at 2 GiB each (verify), and this ISO is already about 3.5 GB. Plan for another host.
 - Redistribution of NVIDIA and other RPM Fusion nonfree packages must be checked before publishing.
 - Fedora branding must be removed first (M6).
+
+## D-9 Google Chrome: OPEN
+Xodus Nexus's docs say Chrome is required for its passkey/security-key sign-in option; the field report
+found sign-in only worked with Chrome. Chrome is not in Fedora's repositories. Options:
+(a) install it at first boot or through Update & Repair from Google's repository (no redistribution question);
+(b) bundle it in the ISO (needs a check of Google's redistribution terms; I would not assume it is allowed);
+(c) leave it out and rely on a clear one-click "Install Chrome" action.
+Leaning (a), and it fits the Update & Repair design (D-6).
