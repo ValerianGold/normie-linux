@@ -106,6 +106,11 @@ if problem:
     keep = [l for l in out.splitlines()
             if re.search(r"Problem|cannot install|conflicts|nothing provides|No match|requires|package .* from", l)]
     print("\n".join(keep[:60]))
+    only_missing = all(l.startswith("No match for argument") for l in keep) and keep
+    if only_missing:
+        print("\nThese are all MISSING package names. DNF stops at those before it can look for")
+        print("conflicts, so this run says nothing about conflicts yet. Fix the names first")
+        print("(python3 tools/check-packages.py shows suggestions), then run this again.")
     print("\nFull output: solve-check.log   (paste me the lines above, or that file's contents)")
     sys.exit(1)
 if summary:

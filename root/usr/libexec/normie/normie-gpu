@@ -1,0 +1,303 @@
+#!/usr/bin/python3
+"""
+normie-gpu: detect NVIDIA graphics cards, pick the right RPM Fusion driver
+branch, and install or repair it.
+
+  normie-gpu detect              show detected cards and the chosen branch (read-only)
+  normie-gpu plan [--quiet]      show what 'apply' would do (read-only).
+                                 Exit status 10 = something to do, 0 = nothing to do.
+  normie-gpu apply [--dry-run]   do it (needs root). --dry-run only prints commands.
+
+Output lines look like KIND|text so the Update & Repair window can read them:
+INFO, WARN, DRY, MOK (one-time password for Secure Boot enrollment), NEEDS_REBOOT.
+
+Design rules (see docs/UPDATE-AND-REPAIR.md):
+  * Unknown or unsupported hardware means DO NOTHING (the open-source nouveau
+    driver keeps working). Never guess.
+  * Never remove a working driver before the replacement is installed.
+  * The Secure Boot key is created BEFORE modules are built, so they get signed.
+"""
+import os
+import re
+import secrets
+import shlex
+import subprocess
+import sys
+import tempfile
+
+SYSFS = os.environ.get("NORMIE_SYSFS", "/sys")
+DRY = "--dry-run" in sys.argv or os.environ.get("NORMIE_DRYRUN") == "1"
+QUIET = "--quiet" in sys.argv
+AKMODS_KEY = os.environ.get("NORMIE_AKMODS_KEY", "/etc/pki/akmods/certs/public_key.der")
+
+# chip-code prefix (from the PCI name, e.g. "GP106 [GeForce GTX 1060]") -> generation
+GENERATIONS = {"GT": "tesla", "GF": "fermi", "GK": "kepler", "GM": "maxwell", "GP": "pascal",
+               "GV": "volta", "TU": "turing", "GA": "ampere", "AD": "ada", "GB": "blackwell",
+               "GH": "hopper"}
+# generation -> RPM Fusion branch. Fermi, Kepler and older only have legacy drivers for
+# Xorg, and Plasma now runs on Wayland, so those cards stay on the open-source driver.
+BRANCH_OF = {"turing": "current", "ampere": "current", "ada": "current", "blackwell": "current",
+             "hopper": "current", "maxwell": "580xx", "pascal": "580xx", "volta": "580xx"}
+AKMOD_NAME = {"current": "akmod-nvidia", "580xx": "akmod-nvidia-580xx",
+              "470xx": "akmod-nvidia-470xx", "390xx": "akmod-nvidia-390xx"}
+
+
+def say(kind, text):
+    if QUIET and kind in ("INFO",):
+        return
+    print(f"{kind}|{text}", flush=True)
+
+
+def capture(cmd):
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True)
+    except FileNotFoundError:
+        return subprocess.CompletedProcess(cmd, 127, "", "not found")
+
+
+def run(cmd):
+    """Run a command that changes the system (or just print it in dry-run mode)."""
+    if DRY:
+        say("DRY", shlex.join(cmd))
+        return 0
+    say("INFO", "Running: " + shlex.join(cmd))
+    r = subprocess.run(cmd)
+    return r.returncode
+
+
+# ---------------------------------------------------------------- detection
+def find_nvidia():
+    gpus = []
+    root = os.path.join(SYSFS, "bus/pci/devices")
+    if not os.path.isdir(root):
+        return gpus
+    for slot in sorted(os.listdir(root)):
+        base = os.path.join(root, slot)
+        try:
+            vendor = open(os.path.join(base, "vendor")).read().strip().lower()
+            cls = open(os.path.join(base, "class")).read().strip().lower()
+            dev = int(open(os.path.join(base, "device")).read().strip(), 16)
+        except (OSError, ValueError):
+            continue
+        if vendor != "0x10de" or not (cls.startswith("0x0300") or cls.startswith("0x0302")):
+            continue
+        name = None
+        r = capture(["lspci", "-s", slot, "-mm"])
+        if r.returncode == 0 and r.stdout.strip():
+            try:
+                fields = shlex.split(r.stdout.strip().splitlines()[0])
+                name = fields[3] if len(fields) > 3 else None
+            except ValueError:
+                name = None
+        gen = None
+        if name:
+            m = re.match(r"^([A-Z]{2})\d{3}", name)
+            if m:
+                gen = GENERATIONS.get(m.group(1))
+        if gen is None and dev >= 0x1E00:
+            gen = "turing-or-newer (by device id)"
+        branch = BRANCH_OF.get(gen) or ("current" if gen and gen.startswith("turing-or-newer") else None)
+        gpus.append({"slot": slot, "device": dev, "name": name or f"device 10de:{dev:04x}",
+                     "generation": gen or "unknown", "branch": branch})
+    return gpus
+
+
+def choose_branch(gpus):
+    branches = {g["branch"] for g in gpus if g["branch"]}
+    if len(branches) > 1:
+        return None, "This computer has NVIDIA cards that need different drivers; leaving it unchanged."
+    if len(branches) == 1:
+        return branches.pop(), None
+    return None, None
+
+
+# ---------------------------------------------------------------- state
+def packages_for(branch):
+    s = "" if branch == "current" else "-" + branch
+    return [f"akmod-nvidia{s}", f"xorg-x11-drv-nvidia{s}", f"xorg-x11-drv-nvidia{s}-libs.i686",
+            f"xorg-x11-drv-nvidia{s}-cuda", "libva-nvidia-driver", "libva-nvidia-driver.i686"]
+
+
+def installed_branches():
+    return [b for b, pkg in AKMOD_NAME.items() if capture(["rpm", "-q", pkg]).returncode == 0]
+
+
+def kernels():
+    r = capture(["rpm", "-q", "kernel-core", "--qf", "%{VERSION}-%{RELEASE}.%{ARCH}\n"])
+    ks = [k.strip() for k in r.stdout.splitlines() if k.strip() and "not installed" not in k]
+
+    def key(v):
+        return [int(p) if p.isdigit() else p for p in re.split(r"[.\-_]", v)]
+    try:
+        return sorted(ks, key=key)
+    except TypeError:
+        return sorted(ks)
+
+
+def module_built(kver):
+    r = capture(["modinfo", "-k", kver, "-F", "version", "nvidia"])
+    return r.returncode == 0 and bool(r.stdout.strip())
+
+
+def secure_boot_on():
+    return "secureboot enabled" in capture(["mokutil", "--sb-state"]).stdout.lower()
+
+
+def repos_ok():
+    return capture(["rpm", "-q", "rpmfusion-nonfree-release"]).returncode == 0
+
+
+def make_plan():
+    gpus = find_nvidia()
+    plan = {"gpus": gpus, "branch": None, "kind": "none", "notes": [], "packages": []}
+    if not gpus:
+        plan["notes"].append("No NVIDIA graphics card found.")
+        return plan
+    branch, problem = choose_branch(gpus)
+    for g in gpus:
+        plan["notes"].append(f"NVIDIA card: {g['name']} ({g['generation']})"
+                             + (f" -> driver {g['branch']}" if g["branch"] else " -> open-source driver"))
+    if problem:
+        plan["notes"].append(problem)
+        return plan
+    if branch is None:
+        plan["notes"].append("This card works with the open-source driver already included; nothing to install.")
+        return plan
+    plan["branch"] = branch
+    plan["packages"] = packages_for(branch)
+    have = installed_branches()
+    if not have:
+        plan["kind"] = "install"
+    elif branch not in have:
+        plan["kind"] = "swap"
+        plan["notes"].append(f"Installed driver branch {have} does not match this card; switching to {branch}.")
+    else:
+        missing = [k for k in kernels() if not module_built(k)]
+        if missing:
+            plan["kind"] = "build"
+            plan["notes"].append("Driver installed but not built for: " + ", ".join(missing))
+        elif secure_boot_on() and capture(["mokutil", "--test-key", AKMODS_KEY]).returncode != 0 \
+                and os.path.exists(AKMODS_KEY):
+            plan["kind"] = "enroll"
+            plan["notes"].append("Secure Boot key is not enrolled yet.")
+    return plan
+
+
+# ---------------------------------------------------------------- commands
+def cmd_detect():
+    plan = make_plan()
+    for n in plan["notes"]:
+        say("INFO", n)
+    say("INFO", f"Chosen driver branch: {plan['branch'] or 'none'}; state: {plan['kind']}")
+    return 0
+
+
+def cmd_plan():
+    plan = make_plan()
+    for n in plan["notes"]:
+        say("INFO", n)
+    if plan["kind"] == "none":
+        say("INFO", "Nothing to do.")
+        return 0
+    say("INFO", f"Action needed: {plan['kind']} (driver {plan['branch']})")
+    return 10
+
+
+def ensure_key():
+    if os.path.exists(AKMODS_KEY):
+        return True
+    say("INFO", "Creating a signing key for the NVIDIA driver")
+    return run(["kmodgenca", "-a"]) == 0
+
+
+def enroll_key():
+    """Secure Boot: stage the key for enrollment with a one-time password."""
+    if not secure_boot_on():
+        return False
+    if not DRY and capture(["mokutil", "--test-key", AKMODS_KEY]).returncode == 0:
+        say("INFO", "Secure Boot key is already enrolled")
+        return False
+    pending = capture(["mokutil", "--list-new"])
+    if pending.returncode == 0 and "fingerprint" in pending.stdout.lower():
+        run(["mokutil", "--revoke-import"])  # start over so the password we show is the right one
+    pw = "".join(secrets.choice("0123456789") for _ in range(8))
+    if DRY:
+        say("DRY", f"mokutil --import {AKMODS_KEY} (with a one-time password)")
+    else:
+        h = capture(["mokutil", f"--generate-hash={pw}"])
+        if h.returncode != 0 or not h.stdout.strip():
+            say("WARN", "Could not prepare the Secure Boot key.")
+            return False
+        with tempfile.NamedTemporaryFile("w", delete=False) as fh:
+            fh.write(h.stdout.strip() + "\n")
+            hashfile = fh.name
+        os.chmod(hashfile, 0o600)
+        rc = run(["mokutil", "--import", AKMODS_KEY, "--hash-file", hashfile])
+        os.unlink(hashfile)
+        if rc != 0:
+            say("WARN", "Could not stage the Secure Boot key.")
+            return False
+    say("MOK", pw)
+    say("NEEDS_REBOOT", "Restart to finish setting up the NVIDIA driver (a blue screen will ask you to enroll a key)")
+    return True
+
+
+def cmd_apply():
+    plan = make_plan()
+    for n in plan["notes"]:
+        say("INFO", n)
+    if plan["kind"] == "none":
+        say("INFO", "Graphics drivers: nothing to do.")
+        return 0
+    if not DRY and os.geteuid() != 0:
+        say("WARN", "Run as administrator (the Update & Repair button does this).")
+        return 1
+    changed = False
+    if plan["kind"] in ("install", "swap"):
+        if not repos_ok() and not DRY:
+            say("WARN", "The NVIDIA software source (RPM Fusion nonfree) is not set up yet.")
+            return 1
+        cmd = ["dnf", "install", "-y"] + (["--allowerasing"] if plan["kind"] == "swap" else []) + plan["packages"]
+        if run(cmd) != 0:
+            say("WARN", "The NVIDIA driver could not be installed. Your screen keeps using the current driver.")
+            return 1
+        run(["dnf", "mark", "user", AKMOD_NAME[plan["branch"]]])
+        changed = True
+    if secure_boot_on():
+        ensure_key()  # must exist BEFORE modules are built so they are signed
+    ks = kernels() or [os.environ.get("NORMIE_RUNNING_KERNEL", os.uname().release)]
+    for k in ks:
+        if DRY or not module_built(k):
+            say("INFO", f"Building the NVIDIA driver for Linux {k} (this can take several minutes)")
+            run(["akmods", "--force", "--kernels", k])
+            changed = True
+    if not DRY:
+        built = [k for k in ks if module_built(k)]
+        if not built:
+            say("WARN", "The NVIDIA driver did not build. Your computer keeps working with the open-source driver.")
+            return 1
+        newest = ks[-1]
+        if newest not in built:
+            best = built[-1]
+            say("WARN", f"The NVIDIA driver is not ready for the newest Linux ({newest}) yet. "
+                        f"Your computer will keep using {best} until it is.")
+            run(["grubby", f"--set-default=/boot/vmlinuz-{best}"])
+    enrolled = enroll_key()
+    if changed and not enrolled:
+        say("NEEDS_REBOOT", "Restart to start using the NVIDIA driver")
+    say("INFO", "Graphics drivers: done.")
+    return 0
+
+
+def main():
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    cmd = args[0] if args else "detect"
+    fn = {"detect": cmd_detect, "plan": cmd_plan, "apply": cmd_apply}.get(cmd)
+    if not fn:
+        print(__doc__)
+        return 2
+    return fn()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

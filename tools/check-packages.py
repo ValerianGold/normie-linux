@@ -21,6 +21,7 @@ Before running, enable the same repos KIWI will use (Fedora, updates,
 rpmfusion-free [, rpmfusion-nonfree]) on the host so RPM Fusion packages are
 visible. Setup commands are in docs/START-HERE.md.
 """
+import difflib
 import glob
 import os
 import re
@@ -76,6 +77,25 @@ def collect(files):
     return pkgs, keys
 
 
+def suggest(spec, names_by_arch):
+    """Likely replacements for a missing package name: close spellings, plus packages
+    sharing the most distinctive word (e.g. 'caladea', 'openjdk', 'liberation')."""
+    base = re.sub(r"\.(i686|x86_64|noarch)$", "", spec)
+    names = list(names_by_arch)
+    found = difflib.get_close_matches(base, names, n=4, cutoff=0.6)
+    words = [w for w in re.split(r"[-_.]", base)
+             if len(w) >= 4 and not w.isdigit() and w.lower() not in
+             ("fonts", "font", "devel", "libs", "runtime", "headless", "compat")]
+    if words:
+        key = max(words, key=len).lower()
+        found += sorted(n for n in names if key in n.lower())[:6]
+    out = []
+    for n in found:
+        if n not in out and n != base:
+            out.append(n)
+    return out[:6]
+
+
 def main():
     avail_file, files = parse_args(sys.argv[1:])
     if not files:
@@ -106,6 +126,9 @@ def main():
         print(f"NOT FOUND in enabled repos ({len(missing)}) - these will break the build:")
         for spec, src in missing:
             print(f"  {spec:45s} ({src})")
+            alts = suggest(spec, names_by_arch)
+            if alts:
+                print(f"      maybe you want: {', '.join(alts)}")
     else:
         print("All package names resolve.")
     if no32:

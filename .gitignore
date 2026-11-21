@@ -6,3 +6,5 @@ outdir/
 *.sha256
 normie-linux-out/
 *.log
+__pycache__/
+*.pyc

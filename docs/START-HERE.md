@@ -96,3 +96,24 @@ tools/build.sh Normie-Full-Live
 | See build logs | `~/normie-linux-out/<profile>.log` |
 | Know what is decided vs open | `docs/DECISIONS.md` |
 | Know what to do next | `docs/ROADMAP.md` |
+
+## Applying a patch from Claude
+
+Yes: download the `.patch` file, then run the command given with it, from the repo folder.
+Patches apply in numeric order (0001, 0002, 0003...), each on top of the previous one.
+
+```
+cd ~/normie-linux
+git am ~/Downloads/<patch-file-name>.patch
+```
+
+`git am` adds the change as a normal commit. If it complains, run `git am --abort` and tell
+me the message; nothing is lost. To see what is applied: `git log --oneline`.
+
+## Run the tests
+
+```
+python3 -m unittest discover -s tests -v
+```
+
+Simulated hardware and fake commands only; it changes nothing on your machine.

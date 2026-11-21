@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Packages the Normie Linux tools themselves need (profile: Normie-Live, so they are in
+  BOTH Normie-Live and Normie-Full-Live and the Update & Repair window works in either).
+  The tools are in root/usr/libexec/normie/; see docs/UPDATE-AND-REPAIR.md.
+-->
+<image>
+	<packages type="image" patternType="plusRecommended" profiles="Normie-Live">
+		<package name="python3-pyqt6"/>
+		<package name="pciutils"/>
+		<package name="mokutil"/>
+		<package name="polkit"/>
+		<package name="curl"/>
+	</packages>
+</image>

@@ -1,0 +1,163 @@
+#!/bin/bash
+# Normie Linux: Update & Repair (backend).  Normally started by the Update & Repair
+# window through pkexec, which asks for the administrator password once.
+#
+#   normie-update                 full update and repair
+#   normie-update --only gpu      just check/install graphics drivers
+#   normie-update --dry-run       show what would happen, change nothing (no root needed)
+#
+# Output is "KIND|text" lines for the window to read (PROGRESS, INFO, WARN, DRY, MOK,
+# NEEDS_REBOOT, RESULT); anything else is raw command output for the details log.
+# Design and safety notes: docs/UPDATE-AND-REPAIR.md
+set -u
+
+# Fixed paths. The test suite can override them, but ONLY with NORMIE_TEST=1 (pkexec and
+# sudo also clear the environment, so an ordinary user cannot redirect a root script).
+LIBEXEC=/usr/libexec/normie
+CONF=/etc/normie/update.conf
+LOG=/var/log/normie-update.log
+if [ "${NORMIE_TEST:-0}" = 1 ]; then
+	LIBEXEC="${NORMIE_LIBEXEC:-$LIBEXEC}"; CONF="${NORMIE_CONF:-$CONF}"; LOG="${NORMIE_LOG:-$LOG}"
+fi
+DRY=0
+ONLY=all
+while [ $# -gt 0 ]; do
+	case "$1" in
+		--dry-run) DRY=1 ;;
+		--only) ONLY="${2:-all}"; shift ;;
+		--gui) ;;
+	esac
+	shift
+done
+# shellcheck disable=SC1090
+[ -r "$CONF" ] && . "$CONF"
+DEPS_LIST_URL="${DEPS_LIST_URL:-}"
+
+touch "$LOG" 2>/dev/null || LOG="/tmp/normie-update.log"
+
+say() { printf '%s|%s\n' "$1" "$2" | tee -a "$LOG"; }
+
+run() {  # run a command, logging its output; in dry-run mode only print it
+	if [ "$DRY" = 1 ]; then say DRY "$*"; return 0; fi
+	"$@" 2>&1 | tee -a "$LOG"
+	return "${PIPESTATUS[0]}"
+}
+
+is_live() {
+	[ "${NORMIE_TEST:-0}" = 1 ] && [ -n "${NORMIE_FORCE_LIVE:-}" ] && return 0
+	[ -e /run/initramfs/livedev ] || grep -qw rd.live.image /proc/cmdline 2>/dev/null
+}
+is_root() {
+	if [ "${NORMIE_TEST:-0}" = 1 ] && [ -n "${NORMIE_FAKE_ROOT:-}" ]; then [ "$NORMIE_FAKE_ROOT" = 1 ]; return; fi
+	[ "$(id -u)" -eq 0 ]
+}
+
+FAILED=()
+fail() { FAILED+=("$1"); say WARN "$2"; }
+
+# ------------------------------------------------------------------ steps
+s_net() {
+	if [ "$DRY" = 1 ]; then say DRY "check internet connection"; return 0; fi
+	if curl -fsS --max-time 15 -o /dev/null https://fedoraproject.org/ 2>/dev/null; then return 0; fi
+	say WARN "No internet connection. Connect to the internet and try again."
+	return 1
+}
+
+s_repos() {  # RPM Fusion: needed for NVIDIA drivers, many codecs and extra software
+	local rel
+	rel="$(rpm -E %fedora 2>/dev/null || echo 45)"
+	for kind in free nonfree; do
+		if ! rpm -q "rpmfusion-$kind-release" >/dev/null 2>&1; then
+			run dnf install -y "https://mirrors.rpmfusion.org/$kind/fedora/rpmfusion-$kind-release-$rel.noarch.rpm" \
+				|| fail repos "Could not add the $kind software source."
+		fi
+	done
+}
+
+s_deps() {  # install any newly listed compatibility libraries (data only, never code)
+	if [ -z "$DEPS_LIST_URL" ]; then say INFO "No online dependency list configured; skipping."; return 0; fi
+	case "$DEPS_LIST_URL" in https://*) ;; *) fail deps "Dependency list must use https://. Skipping."; return 0 ;; esac
+	if [ "$DRY" = 1 ]; then say DRY "download $DEPS_LIST_URL and install the packages it lists"; return 0; fi
+	local tmp valid=() line
+	tmp="$(mktemp)"
+	if ! curl -fsSL --max-time 30 --max-filesize 1048576 -o "$tmp" "$DEPS_LIST_URL"; then
+		rm -f "$tmp"; fail deps "Could not download the dependency list. Skipping."; return 0
+	fi
+	while IFS= read -r line; do
+		line="${line%%#*}"; line="${line//[[:space:]]/}"
+		[ -z "$line" ] && continue
+		# package names only: must start with a letter or digit (so it can never act as an option)
+		if [[ "$line" =~ ^[A-Za-z0-9][A-Za-z0-9._+-]{0,100}$ ]]; then valid+=("$line")
+		else say WARN "Ignoring an invalid line in the dependency list."; fi
+	done < "$tmp"
+	rm -f "$tmp"
+	if [ "${#valid[@]}" -eq 0 ] || [ "${#valid[@]}" -gt 3000 ]; then
+		fail deps "The dependency list looked wrong (${#valid[@]} entries). Skipping."; return 0
+	fi
+	say INFO "Checking ${#valid[@]} compatibility libraries"
+	run dnf install -y --skip-unavailable "${valid[@]}" || fail deps "Some compatibility libraries could not be installed."
+}
+
+s_upgrade() {
+	run dnf upgrade --refresh -y || { fail upgrade "The system update did not finish."; return 1; }
+}
+
+s_flatpak() {
+	if ! command -v flatpak >/dev/null 2>&1; then say INFO "Flatpak not installed; skipping."; return 0; fi
+	run flatpak update -y --noninteractive || fail flatpak "Some apps could not be updated."
+}
+
+s_gpu() {
+	local args=(apply) rc
+	[ "$DRY" = 1 ] && args+=(--dry-run)
+	"$LIBEXEC/normie-gpu" "${args[@]}" 2>&1 | tee -a "$LOG"
+	rc="${PIPESTATUS[0]}"
+	[ "$rc" -eq 0 ] || fail gpu "Graphics driver setup did not finish."
+}
+
+s_finish() {
+	run dnf clean packages >/dev/null 2>&1
+	if [ "$DRY" != 1 ]; then
+		local latest
+		latest="$(rpm -q kernel-core --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' 2>/dev/null | sort -V | tail -1)"
+		if [ -n "$latest" ] && [ "$latest" != "$(uname -r)" ]; then
+			say NEEDS_REBOOT "A new version of Linux was installed"
+		fi
+	fi
+}
+
+# ------------------------------------------------------------------ main
+if is_live && [ "$DRY" != 1 ]; then
+	say WARN "This is the live session. Install Normie Linux first; updates apply to the installed system."
+	say RESULT "failed|live session"; exit 1
+fi
+if [ "$DRY" != 1 ] && ! is_root; then
+	say WARN "Update & Repair needs administrator rights."
+	say RESULT "failed|not root"; exit 1
+fi
+
+case "$ONLY" in
+	gpu) STEPS=(net:"Checking your connection" repos:"Setting up software sources" gpu:"Checking graphics drivers" finish:"Finishing up") ;;
+	*)   STEPS=(net:"Checking your connection" repos:"Setting up software sources"
+	            deps:"Adding any missing compatibility libraries" upgrade:"Updating your system"
+	            flatpak:"Updating your apps" gpu:"Checking graphics drivers" finish:"Finishing up") ;;
+esac
+
+total=${#STEPS[@]}
+i=0
+for entry in "${STEPS[@]}"; do
+	name="${entry%%:*}"; label="${entry#*:}"
+	say PROGRESS "$(( i * 100 / total ))|$label"
+	"s_$name"
+	rc=$?
+	if [ "$name" = net ] && [ "$rc" -ne 0 ]; then say RESULT "failed|no internet"; exit 1; fi
+	i=$(( i + 1 ))
+done
+say PROGRESS "100|Done"
+
+if [ "${#FAILED[@]}" -eq 0 ]; then
+	say RESULT "ok|everything is up to date"
+	exit 0
+fi
+say RESULT "partial|some steps had problems: ${FAILED[*]}"
+exit 1

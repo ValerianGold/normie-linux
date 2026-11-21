@@ -45,6 +45,7 @@
 	<include from="this://./components/normie/profiles.xml"/>
 	<include from="this://./components/normie/deps.xml"/>
 	<include from="this://./components/normie/deps-universal.xml"/>
+	<include from="this://./components/normie/tools.xml"/>
 
 	<packages type="bootstrap">
 		<package name="filesystem"/>

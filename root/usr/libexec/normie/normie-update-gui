@@ -1,0 +1,214 @@
+#!/usr/bin/python3
+"""
+Normie Linux: Update & Repair window (PyQt6). A thin front end: all real work is done by
+/usr/libexec/normie/normie-update, started through pkexec (one administrator password prompt).
+
+  normie-update-gui              the normal window with the big button
+  normie-update-gui --first-run  started at login: if an NVIDIA card needs its driver,
+                                 offer to set it up; otherwise exit without showing anything
+
+In the live session (before installing) the window runs in demo mode: it shows the whole
+flow but runs the backend with --dry-run, so nothing is changed.
+"""
+import os
+import subprocess
+import sys
+
+from PyQt6.QtCore import QProcess, Qt
+from PyQt6.QtWidgets import (QApplication, QLabel, QMessageBox, QPlainTextEdit, QProgressBar,
+                             QPushButton, QVBoxLayout, QWidget)
+
+LIBEXEC = "/usr/libexec/normie"
+UPDATE = f"{LIBEXEC}/normie-update"
+GPU = f"{LIBEXEC}/normie-gpu"
+DISMISSED = os.path.expanduser("~/.config/normie/gpu-prompt-dismissed")
+
+
+def is_live():
+    try:
+        with open("/proc/cmdline") as fh:
+            cmdline = fh.read()
+    except OSError:
+        cmdline = ""
+    return os.path.exists("/run/initramfs/livedev") or "rd.live.image" in cmdline
+
+
+class Window(QWidget):
+    def __init__(self, auto_gpu=False):
+        super().__init__()
+        self.setWindowTitle("Update & Repair")
+        self.setMinimumWidth(520)
+        self.live = is_live()
+        self.reboot_needed = False
+        self.result_seen = False
+        self.proc = None
+        self.buf = ""
+
+        lay = QVBoxLayout(self)
+        title = QLabel("<h2>Keep your computer up to date</h2>")
+        lay.addWidget(title)
+        self.note = QLabel(
+            "Updates your system, your apps and your graphics driver, and installs any "
+            "missing pieces other programs need. Your computer stays usable while it works.")
+        self.note.setWordWrap(True)
+        lay.addWidget(self.note)
+        if self.live:
+            demo = QLabel("<b>Demo mode:</b> you are running from the install disc, so nothing "
+                          "will be changed. Install Normie Linux to use Update &amp; Repair for real.")
+            demo.setWordWrap(True)
+            lay.addWidget(demo)
+
+        self.button = QPushButton("Update && Repair")
+        self.button.setMinimumHeight(64)
+        f = self.button.font()
+        f.setPointSize(f.pointSize() + 4)
+        self.button.setFont(f)
+        self.button.clicked.connect(lambda: self.start("all"))
+        lay.addWidget(self.button)
+
+        self.bar = QProgressBar()
+        self.bar.setRange(0, 100)
+        self.bar.hide()
+        lay.addWidget(self.bar)
+        self.status = QLabel("")
+        self.status.setWordWrap(True)
+        lay.addWidget(self.status)
+
+        self.mok = QLabel("")
+        self.mok.setWordWrap(True)
+        self.mok.setTextFormat(Qt.TextFormat.RichText)
+        self.mok.hide()
+        lay.addWidget(self.mok)
+
+        self.restart = QPushButton("Restart now")
+        self.restart.hide()
+        self.restart.clicked.connect(lambda: QProcess.startDetached("systemctl", ["reboot"]))
+        lay.addWidget(self.restart)
+
+        self.toggle = QPushButton("Show details")
+        self.toggle.setCheckable(True)
+        self.toggle.toggled.connect(self.toggle_log)
+        lay.addWidget(self.toggle)
+        self.log = QPlainTextEdit()
+        self.log.setReadOnly(True)
+        self.log.setMinimumHeight(180)
+        self.log.hide()
+        lay.addWidget(self.log)
+
+        if auto_gpu:
+            self.start("gpu")
+
+    def toggle_log(self, on):
+        self.log.setVisible(on)
+        self.toggle.setText("Hide details" if on else "Show details")
+        self.adjustSize()
+
+    def start(self, only):
+        args = ["--gui"] + (["--only", only] if only != "all" else [])
+        if self.live:
+            program, argv = UPDATE, args + ["--dry-run"]       # demo: no root needed, no changes
+        else:
+            program, argv = "pkexec", [UPDATE] + args           # asks for the password once
+        self.button.setEnabled(False)
+        self.bar.setValue(0)
+        self.bar.show()
+        self.status.setText("Starting...")
+        self.mok.hide()
+        self.restart.hide()
+        self.reboot_needed = False
+        self.result_seen = False
+        self.proc = QProcess(self)
+        self.proc.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
+        self.proc.readyReadStandardOutput.connect(self.read_output)
+        self.proc.finished.connect(self.finished)
+        self.proc.start(program, argv)
+
+    def read_output(self):
+        self.buf += bytes(self.proc.readAllStandardOutput()).decode("utf-8", "replace")
+        *lines, self.buf = self.buf.split("\n")
+        for line in lines:
+            self.handle(line.rstrip())
+
+    def handle(self, line):
+        kind, _, rest = line.partition("|")
+        if kind == "PROGRESS":
+            pct, _, label = rest.partition("|")
+            if pct.isdigit():
+                self.bar.setValue(int(pct))
+            self.status.setText(label)
+        elif kind == "WARN":
+            self.status.setText(rest)
+            self.log.appendPlainText("! " + rest)
+        elif kind == "MOK":
+            self.mok.setText(
+                "<b>One more step after restarting.</b> A blue screen will appear. Choose "
+                "<b>Enroll MOK</b>, then <b>Continue</b>, then <b>Yes</b>, and type this password:"
+                f"<br><br><span style='font-size:22pt'><b>{rest}</b></span>")
+            self.mok.show()
+        elif kind == "NEEDS_REBOOT":
+            self.reboot_needed = True
+            self.log.appendPlainText(rest)
+        elif kind == "RESULT":
+            self.result_seen = True
+            state, _, why = rest.partition("|")
+            self.log.appendPlainText(f"Result: {state} ({why})")
+            if state == "ok":
+                self.status.setText("All done. Everything is up to date.")
+            elif state == "partial":
+                self.status.setText("Finished, but a few things need attention. Show details to see what.")
+            else:
+                self.status.setText(f"Could not finish: {why}.")
+        elif line:
+            self.log.appendPlainText(line)
+
+    def finished(self, code, _status):
+        self.button.setEnabled(True)
+        if self.proc is not None and self.buf:
+            self.handle(self.buf)
+            self.buf = ""
+        if not self.result_seen:
+            self.status.setText("The update was cancelled or could not start.")
+        if self.reboot_needed and not self.live:
+            self.restart.show()
+            if not self.mok.isVisible():
+                self.status.setText(self.status.text() + " Restart to finish.")
+
+
+def first_run():
+    if is_live() or os.path.exists(DISMISSED):
+        return None
+    try:
+        r = subprocess.run([GPU, "plan", "--quiet"], capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if r.returncode != 10:                       # 10 = there is something to do
+        return None
+    box = QMessageBox()
+    box.setWindowTitle("Graphics driver")
+    box.setText("An NVIDIA graphics card was found.")
+    box.setInformativeText("Install its driver now for the best performance? It takes a few minutes "
+                           "and needs an internet connection. You will be asked to restart afterwards.")
+    box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+    box.button(QMessageBox.StandardButton.Yes).setText("Install now")
+    box.button(QMessageBox.StandardButton.No).setText("Not now")
+    if box.exec() == QMessageBox.StandardButton.Yes:
+        return Window(auto_gpu=True)
+    os.makedirs(os.path.dirname(DISMISSED), exist_ok=True)
+    open(DISMISSED, "w").close()                 # do not ask again; the main button still handles it
+    return None
+
+
+def main():
+    app = QApplication(sys.argv)
+    if "--first-run" in sys.argv:
+        win = first_run()
+        if win is None:
+            return 0
+    else:
+        win = Window()
+    win.show()
+    return app.exec()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

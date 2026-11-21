@@ -91,9 +91,11 @@
 	     and Cambria (caladea), plus CJK and emoji. Microsoft's own fonts cannot be bundled.
 	-->
 	<packages type="image" patternType="plusRecommended" profiles="NormieFull">
-		<package name="liberation-fonts"/>
+		<package name="liberation-sans-fonts"/>
+		<package name="liberation-serif-fonts"/>
+		<package name="liberation-mono-fonts"/>
 		<package name="google-carlito-fonts"/>
-		<package name="google-caladea-fonts"/>
+		<package name="google-crosextra-caladea-fonts"/>
 		<package name="dejavu-sans-fonts"/>
 		<package name="google-noto-sans-cjk-fonts"/>
 		<package name="google-noto-color-emoji-fonts"/>
@@ -113,11 +115,12 @@
 	</packages>
 
 	<!-- ===== Gaming, controllers and Windows-game tooling [SAFE] =====
-	     game-devices-udev makes common controllers work. winetricks and wine-mono are the
-	     standard Wine helpers. vkd3d is Direct3D 12 for Wine.
+	     steam-devices (udev rules, in Fedora's own repos) makes common controllers work. If RPM
+	     Fusion's Steam is installed later it replaces this package (a conflict existed in 2025). winetricks and wine-mono are the
+	     standard Wine helpers. (vkd3d is not listed: no longer a separate package name in Fedora 45.)
 	-->
 	<packages type="image" patternType="plusRecommended" profiles="NormieFull">
-		<package name="game-devices-udev"/>
+		<package name="steam-devices"/>
 		<package name="gamemode"/>
 		<package name="gamemode.i686"/>
 		<package name="mangohud"/>
@@ -125,8 +128,6 @@
 		<package name="vulkan-tools"/>
 		<package name="winetricks"/>
 		<package name="wine-mono"/>
-		<package name="vkd3d"/>
-		<package name="vkd3d.i686"/>
 		<package name="libusb1"/>
 		<package name="libusb1.i686"/>
 	</packages>
@@ -145,27 +146,22 @@
 	<!-- ===== Older programs (compatibility libraries) [MODERATE] =====
 	     For old binaries that expect libraries Fedora no longer ships by default. These are
 	     compat packages designed to coexist. Names change between releases: run the checker.
+	     compat-openssl11 was removed (not in Fedora 45; OpenSSL 1.1 is end of life).
 	-->
 	<packages type="image" patternType="plusRecommended" profiles="NormieFull">
 		<package name="libxcrypt-compat"/>
 		<package name="libxcrypt-compat.i686"/>
 		<package name="ncurses-compat-libs"/>
 		<package name="ncurses-compat-libs.i686"/>
-		<package name="compat-openssl11"/>
-		<package name="compat-openssl11.i686"/>
 	</packages>
 
-	<!-- ===== Extra runtimes, side by side [MODERATE] =====
-	     Apps pin to specific runtimes: Minecraft and many launchers want Java 17 or 21,
-	     very old apps want Java 8, and .NET apps pin to 8 or 9. Java uses the alternatives
-	     system and .NET installs side by side, so these coexist with the versions above.
+	<!-- ===== Extra runtimes [MODERATE] =====
+	     Fedora 45 ships only OpenJDK 25 (Java 8, 17 and 21 were removed) and only .NET 10, so
+	     older versions are NOT listed here. Java 8/17/21 are available as Eclipse Temurin from
+	     the Adoptium repository, which needs a separate repository (DECISIONS.md D-10). Most
+	     launchers, Minecraft included, download the Java they need themselves.
 	-->
 	<packages type="image" patternType="plusRecommended" profiles="NormieFull">
-		<package name="java-21-openjdk"/>
-		<package name="java-17-openjdk"/>
-		<package name="java-1.8.0-openjdk"/>
-		<package name="dotnet-runtime-8.0"/>
-		<package name="dotnet-runtime-9.0"/>
 		<package name="mono-core"/>
 	</packages>
 

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Update & Repair
+GenericName=System update
+Comment=Updates your system, apps and graphics driver, and installs anything missing
+Exec=/usr/libexec/normie/normie-update-gui
+Icon=system-software-update
+Terminal=false
+Categories=System;Settings;
+Keywords=update;upgrade;repair;refresh;nvidia;driver;fix

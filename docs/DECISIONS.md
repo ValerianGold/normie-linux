@@ -27,15 +27,14 @@ already covered almost everything; `deps.xml` gained a small labeled group. The 
 packages from the field report are *not* required by the official installer (it states a compiler is not
 needed for the prebuilt backend), but they stay in under the completeness policy and are harmless.
 
-## D-5 NVIDIA at first boot: PROPOSED
-- A one-time service on the installed system detects the GPU, picks the right driver
-  branch (newer GPUs and legacy GPUs need different branches), builds/enables it, and reboots.
-- For installs without a network, the driver packages must be on the ISO.
-- Secure Boot requires enrolling a signing key (a blue screen at reboot where a
-  password is typed). It cannot be fully silent, but it can be walked through graphically.
-- Not decided: exactly which driver branches to ship. Needs research in M5 against current RPM Fusion contents.
+## D-5 NVIDIA: IMPLEMENTED in v0, NOT YET TESTED ON HARDWARE
+Drivers are installed at run time from RPM Fusion nonfree (not bundled in the ISO). Branch per card
+generation: current for Turing and newer, 580xx for Maxwell/Pascal/Volta, nouveau for older cards.
+Secure Boot needs a key-enrollment step that cannot be silent. Details and limits: `UPDATE-AND-REPAIR.md`.
+Still open: installs with no internet; Optimus laptops; whether to auto-offer at first login (done
+as a prompt, not silently) or enable a first-boot service later.
 
-## D-6 Update & Repair design: PROPOSED
+## D-6 Update & Repair design: PARTLY IMPLEMENTED (steps 2 to 4 of 5 in v0; see UPDATE-AND-REPAIR.md)
 1. Snapshot first (Btrfs; Fedora KDE already defaults to it).
 2. Full system update: DNF, Flatpak, firmware.
 3. Dependency health: check, then reinstall anything from `normie-deps` that is missing or damaged.
@@ -67,3 +66,13 @@ found sign-in only worked with Chrome. Chrome is not in Fedora's repositories. O
 (b) bundle it in the ISO (needs a check of Google's redistribution terms; I would not assume it is allowed);
 (c) leave it out and rely on a clear one-click "Install Chrome" action.
 Leaning (a), and it fits the Update & Repair design (D-6).
+
+## D-10 Older Java and .NET versions: OPEN
+Fedora 45 ships only OpenJDK 25 and .NET 10. Java 8, 17 and 21 exist as Eclipse Temurin from the
+Adoptium repository (a separate repository, off by default). Many launchers, Minecraft included,
+download their own Java, so this may not matter. Decide whether Update & Repair should enable
+Adoptium and install Temurin 8/17/21, or leave it to the apps.
+
+## D-11 Updating the tools themselves: DECIDED (not built)
+The scripts will update through an RPM in our own signed repository (Milestone 3), never by running
+code fetched from raw GitHub as root. Only data (the package-name list) is fetched from GitHub.
