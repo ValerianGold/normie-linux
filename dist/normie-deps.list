@@ -53,7 +53,9 @@ google-carlito-fonts
 google-crosextra-caladea-fonts
 google-noto-color-emoji-fonts
 google-noto-sans-cjk-fonts
+gstreamer1-libav
 gstreamer1-plugins-bad-free.i686
+gstreamer1-plugins-bad-freeworld
 gstreamer1-plugins-bad-freeworld.i686
 gstreamer1-plugins-base.i686
 gstreamer1-plugins-good-extras.i686
@@ -61,6 +63,7 @@ gstreamer1-plugins-good-gtk.i686
 gstreamer1-plugins-good-qt.i686
 gstreamer1-plugins-good-qt6.i686
 gstreamer1-plugins-good.i686
+gstreamer1-plugins-ugly
 gstreamer1-plugins-ugly-free.i686
 gtk3
 gtk3.i686
@@ -80,6 +83,7 @@ libasyncns.i686
 libatomic.i686
 libattr.i686
 libavcodec-free.i686
+libavcodec-freeworld
 libavformat-free.i686
 libavutil-free.i686
 libblkid.i686
@@ -174,6 +178,7 @@ libzstd.i686
 make
 mangohud
 mangohud.i686
+mediainfo
 mesa-dri-drivers.i686
 mesa-libEGL.i686
 mesa-libgbm
@@ -212,6 +217,7 @@ pipewire-libs.i686
 pipewire-pulseaudio
 pkgconf-pkg-config
 plasma-discover-flatpak
+plasma-discover-snap
 polkit
 pulseaudio-libs.i686
 python3
@@ -238,6 +244,7 @@ SDL3_mixer.i686
 SDL3_net.i686
 SDL3_sound.i686
 SDL3_ttf.i686
+snapd
 sqlite-libs.i686
 steam-devices
 systemd-libs.i686

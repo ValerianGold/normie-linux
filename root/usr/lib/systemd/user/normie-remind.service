@@ -1,0 +1,7 @@
+[Unit]
+Description=Remind to run Update & Repair when it has been a while (Normie Linux)
+ConditionPathExists=!/run/initramfs/livedev
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/normie/normie-remind

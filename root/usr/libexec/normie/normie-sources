@@ -1,0 +1,65 @@
+#!/bin/bash
+# normie-sources: set up the extra software sources so the software center (Discover) has a
+# huge catalog out of the box:
+#   - Flathub (Flatpak apps: Chrome, Steam, Discord, VLC, ...)
+#   - RPM Fusion free + nonfree (codecs, NVIDIA drivers, Steam, extra software) with the
+#     "tainted" repositories and the AppStream data that makes them show up in Discover
+# Runs at boot from normie-sources.service until everything succeeds once, and from the
+# Update & Repair button. Every step is idempotent; running it again is harmless.
+#   normie-sources            do it
+#   normie-sources --dry-run  print what it would do
+# (Snap is handled separately: snapd and its Discover plugin are installed packages.)
+STATE=/var/lib/normie
+FLATHUB_URL=https://dl.flathub.org/repo/flathub.flatpakrepo
+TRIES=6
+PAUSE=20
+DRY=0
+[ "${1:-}" = --dry-run ] && DRY=1
+if [ "${NORMIE_TEST:-0}" = 1 ]; then STATE="${NORMIE_STATE:-$STATE}"; PAUSE=0; fi
+
+run() { if [ "$DRY" = 1 ]; then echo "DRY|$*"; return 0; fi; "$@"; }
+retry() {  # the network may not be ready, or another package tool may hold the lock
+	local n
+	for n in $(seq 1 "$TRIES"); do "$@" && return 0; [ "$n" -lt "$TRIES" ] && sleep "$PAUSE"; done
+	return 1
+}
+
+ok=1
+
+# --- Flathub
+if command -v flatpak >/dev/null 2>&1; then
+	if ! flatpak remotes --system --columns=name 2>/dev/null | grep -qx flathub; then
+		retry run flatpak remote-add --system --if-not-exists flathub "$FLATHUB_URL" || { echo "Could not add Flathub"; ok=0; }
+	fi
+else
+	echo "flatpak is not installed; skipping Flathub"
+fi
+
+# --- RPM Fusion release packages (official URLs, per RPM Fusion's own instructions)
+rel="$(rpm -E %fedora 2>/dev/null)"
+[ -n "$rel" ] || rel=45
+for kind in free nonfree; do
+	if ! rpm -q "rpmfusion-$kind-release" >/dev/null 2>&1; then
+		retry run dnf install -y "https://mirrors.rpmfusion.org/$kind/fedora/rpmfusion-$kind-release-$rel.noarch.rpm" \
+			|| { echo "Could not add RPM Fusion $kind"; ok=0; }
+	fi
+done
+
+# --- tainted repositories + AppStream data (needs the release packages above)
+need=()
+for p in rpmfusion-free-release-tainted rpmfusion-nonfree-release-tainted \
+         rpmfusion-free-appstream-data rpmfusion-nonfree-appstream-data; do
+	rpm -q "$p" >/dev/null 2>&1 || need+=("$p")
+done
+if [ "$ok" -eq 1 ] && [ "${#need[@]}" -gt 0 ]; then
+	# --skip-unavailable: a package missing on some release must not make us retry forever
+	retry run dnf install -y --skip-unavailable "${need[@]}" || { echo "Could not add RPM Fusion extras"; ok=0; }
+fi
+
+if [ "$ok" -eq 1 ]; then
+	[ "$DRY" = 1 ] || { mkdir -p "$STATE" && touch "$STATE/sources-done"; }
+	echo "Software sources are ready"
+	exit 0
+fi
+echo "Some sources are not ready; will try again at the next start"
+exit 1

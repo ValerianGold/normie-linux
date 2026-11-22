@@ -9,7 +9,7 @@ not yet run on a real installed system or a real NVIDIA card. See "Not yet verif
 | # | Step | How |
 |---|---|---|
 | 1 | Check the internet connection | `curl` to fedoraproject.org; stops cleanly if offline |
-| 2 | Set up software sources | Adds RPM Fusion free and nonfree using RPM Fusion's official release packages |
+| 2 | Set up software sources | Runs `normie-sources` (see below): Flathub, RPM Fusion free and nonfree, tainted, AppStream data |
 | 3 | Add missing compatibility libraries | Downloads `dist/normie-deps.list` from GitHub (names only) and installs what is missing |
 | 4 | Update the system | `dnf upgrade --refresh -y` |
 | 5 | Update apps | Makes sure Flathub is configured, then `flatpak update` |
@@ -30,27 +30,28 @@ What "repair" means today, honestly: it re-adds any missing package from the dep
 re-adds the software sources, and rebuilds the NVIDIA driver. It does not yet verify or repair
 damaged system files.
 
-### The app store (Flathub)
+### The app store: Flathub, RPM Fusion and Snap
 
-KDE's software center (Discover) only shows what its configured sources offer. Fedora KDE does not
-enable Flathub, the large catalog that has Chrome, Steam, Discord, VLC and most popular apps.
-`normie-flathub.service` adds it automatically at boot (retrying at each start until it works once),
-and the button re-checks it. Fedora's GNOME edition shows Chrome in its software center through
-Fedora's optional "third-party repositories" setting; KDE has no equivalent switch turned on.
+KDE's software center (Discover) only shows what its configured sources offer. Fedora KDE ships with
+very little enabled. `normie-sources.service` runs at boot (retrying at each start until it works once;
+the button runs the same script) and sets up:
 
-Pressing it asks for the administrator password once (polkit). It is also in the application
-menu and on the desktop. Where things live:
+| Source | What it adds to Discover | How |
+|---|---|---|
+| Flathub | Chrome, Steam, Discord, VLC and most popular apps (Flatpak) | `flatpak remote-add` |
+| RPM Fusion free + nonfree | Codecs, NVIDIA drivers, Steam, extra software (RPM) | RPM Fusion's official release packages |
+| RPM Fusion "tainted" | Software with legal restrictions in some countries (for example DVD playback) | `rpmfusion-*-release-tainted` |
+| RPM Fusion AppStream data | Makes the RPM Fusion packages above actually appear in Discover's search | `rpmfusion-*-appstream-data` |
+| Snap | The Snap Store | `snapd` + `plasma-discover-snap` are in the image; `snapd.socket` is enabled by an overlay symlink, and `/snap` points at `/var/lib/snapd/snap` |
 
-| Path (in the repo, under `root/`) | What |
-|---|---|
-| `usr/libexec/normie/normie-update` | The backend script (bash) |
-| `usr/libexec/normie/normie-gpu` | NVIDIA detection and driver management (Python) |
-| `usr/libexec/normie/normie-flathub` + `usr/lib/systemd/system/normie-flathub.service` | Adds Flathub at boot |
-| `usr/libexec/normie/normie-update-gui` | The window (PyQt6). Thin: it only displays what the backend reports |
-| `usr/share/applications/normie-update.desktop` | Menu entry (a copy sits in `etc/skel/Desktop/` for the desktop icon) |
-| `usr/share/polkit-1/actions/org.normielinux.update.policy` | The password prompt |
-| `etc/xdg/autostart/normie-first-run.desktop` | At login, offers the NVIDIA driver if a card needs it |
-| `etc/normie/update.conf` | Settings, including the GitHub list address |
+Fedora's GNOME edition shows Chrome in its software center through its optional "third-party
+repositories" setting; KDE has no equivalent turned on, which is why Chrome was missing.
+
+### The reminder
+
+`normie-remind.timer` (a per-user timer) checks once a day. If Update & Repair has not run for
+`REMIND_DAYS` days (default 14) it shows a notification with an **Update now** button, at most once every
+3 days. A successful full run writes `/var/lib/normie/last-update`. It never changes the system.
 
 ## "Pull changes from GitHub": how, and what it deliberately does not do
 

@@ -15,3 +15,16 @@ Things that are not milestones yet but should not be forgotten: Flathub enabled
 in the software center; Windows-app front end (Bottles or similar); printing
 and scanning out of the box; NTFS and exFAT drives; Bluetooth; GUI path for
 the Fedora 45 to 46 upgrade (Fedora 45's end of life is about 13 months after release).
+
+## Milestone 7: Fedora release upgrades
+The button offers 45 to 46 only after we have verified it (D-14): release-channel gate, per-release package lists,
+readiness checks, offline upgrade.
+
+## Before calling it an alpha
+- [x] Boots, installs, updates; NVIDIA detected and set up on real hardware; Xodus Nexus runs a game.
+- [ ] H.265 sound fixed (codec patch) and verified.
+- [ ] Discover shows Flathub, RPM Fusion and Snap apps out of the box (this patch) and Chrome installs from it.
+- [ ] Pin in the Start menu (needs one read-only look at Plasma's config, D-12).
+- [ ] Fedora branding replaced (M6) and a project contact set in `Normie-Linux.kiwi`.
+- [ ] Source on GitHub; `DEPS_LIST_URL` set in `root/etc/normie/update.conf` BEFORE building any ISO that leaves your hands.
+- [ ] Be clear in the alpha notes that there are no snapshots yet and that the tools update only by reinstalling until M3.

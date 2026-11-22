@@ -44,14 +44,15 @@ Constraints to design around: updates apply at reboot, so the user will always s
 RPM Fusion's driver can lag a new Fedora kernel by days, so the kernel update may need to be held back;
 Fedora 45 to 46 upgrades should be a separate, confirmed step.
 
-## D-7 Codecs: OPEN
-`deps.xml` lists `libavcodec-free*.i686` (Fedora's limited ffmpeg libraries). The usual way
-to get full codecs is RPM Fusion's `ffmpeg` (swapping out Fedora's `ffmpeg-free`), which
-conflicts with them; an alternative is RPM Fusion's `libavcodec-freeworld`, which adds codecs to
-Fedora's libraries instead. Which approach (and whether 32-bit versions exist) has to be
-settled by testing in M2. Related: the list also has `mesa-va-drivers-freeworld.i686` without a 64-bit
-counterpart; a consistent system swaps both. `tools/solve-check.py` will show whether the current mix conflicts.
-The general rules for avoiding conflicts are in `DEPENDENCY-POLICY.md`.
+## D-7 Codecs: PARTLY DECIDED
+Real-hardware test: H.265 video played but without sound. Cause: only the 32-bit full-codec plugins were
+listed, so 64-bit apps used Fedora's limited libraries (video was probably decoded by the NVIDIA GPU).
+Decision: add RPM Fusion's `libavcodec-freeworld` (plus `gstreamer1-plugins-bad-freeworld`,
+`gstreamer1-plugins-ugly`, `gstreamer1-libav`) for 64-bit. It ADDS codecs to Fedora's libraries instead of
+replacing them, so no `ffmpeg` swap and no conflict. Still to verify: that H.265 audio now works.
+Still open: hardware video decode on AMD and Intel needs `mesa-va-drivers-freeworld` swapped in for BOTH
+architectures (a replacement, so it cannot go in the image list); a candidate for the button. The list
+also still has `mesa-va-drivers-freeworld.i686` alone; `solve-check.py` reports no conflict.
 
 ## D-8 Distribution: OPEN
 - Source goes on GitHub. ISOs probably cannot: as far as I know GitHub release files are
@@ -69,11 +70,41 @@ so Chrome then updates with everything else). KDE draws `.rpm` files with an arc
 treats them as archives, which is cosmetic.
 We do not bundle Chrome in the ISO (redistribution terms are Google's to grant).
 
-## D-12 Where the Update & Repair button lives: OPEN
-Requested: a button in the Start menu next to Sleep / Restart / Shut Down. Plasma's menu draws that row
-itself and offers no way to add entries to it. Adding one means modifying the menu's own QML files, and
-Plasma updates would overwrite the change (or break it) on the same machines we update automatically.
-Alternatives that still keep the desktop clean and the button impossible to forget:
-(1) pin it as a favorite at the top of the Start menu; (2) a panel or tray icon; (3) a periodic reminder
-notification ("last updated 14 days ago") with an Update now button. Needs one read-only look at how this
-Plasma version stores menu favorites before writing it. Not built.
+## D-12 Where the Update & Repair button lives: PARTLY BUILT
+Requested: a button in the Start menu next to Sleep / Restart / Shut Down. Plasma draws that row itself and
+offers no way to add entries; adding one means modifying the menu's own QML, which Plasma updates would
+overwrite on machines we update automatically. Agreed alternative: pin it at the top of the Start menu
+(favorites) plus a periodic reminder.
+- Reminder: BUILT (`normie-remind`, see UPDATE-AND-REPAIR.md).
+- Pin: NOT built. A wrong guess here could wipe the user's default favorites, so it waits for a look at how
+  this Plasma version stores them (`grep -rn favorites ~/.config/plasma-org.kde.plasma.desktop-appletsrc`
+  on an installed system).
+
+## D-13 Snap: DECIDED (by the maintainer), with known trade-offs
+Enabled out of the box (`snapd`, `plasma-discover-snap`, socket enabled). Known trade-offs: the Snap Store has
+had scam and malware snaps (Flathub has verified publishers, the Snap Store less so); `snapd` adds a
+background service and many small mounts; most apps are on Flathub anyway, so Snap mostly duplicates it. To
+remove it: delete `snapd` and `plasma-discover-snap` from `components/normie/tools.xml` and the two snap
+symlinks under `root/` (`root/snap` and `root/etc/systemd/system/sockets.target.wants/snapd.socket`).
+
+## D-14 Fedora release upgrades (45 to 46): PLANNED, not built
+Likely to break, in order of probability: third-party repositories not ready for the new release on day one
+(RPM Fusion, Google); the NVIDIA driver lagging the new kernel; package names that disappear or change (the
+Java 17/21 packages and compat-openssl11 vanished this way); our own tools meeting a new Python or PyQt;
+interrupted upgrades. Fedora's own upgrade path is usually smooth; our additions are what raise the risk.
+Plan, using GitHub for the parts that are data:
+1. `dist/release-channel`: one line naming the newest Fedora release WE have verified. The button offers an
+   upgrade only when this says so, so users never jump ahead of our testing. We flip it after the checks pass.
+2. `dist/normie-deps-fNN.list`: a verified package list per release (`check-packages.py` and `solve-check.py`
+   against that release before publishing).
+3. Readiness checks before upgrading: snapshot taken, AC power, disk space, new-release repositories for
+   RPM Fusion and Chrome actually exist.
+4. Download, then apply at reboot (`dnf offline`), the Fedora-supported way.
+5. The upgrade logic itself ships as an RPM from our own repository (Milestone 3), so a fixed upgrader runs
+   BEFORE the upgrade. Scripts cannot update safely from raw GitHub (D-11).
+
+## D-15 "Experimental" software sources: OPEN
+Not enabled: Fedora's `updates-testing` repository. It delivers updates before they are tested and is the
+likeliest source of breakage; combined with one-click automatic updates and no rollback it is the wrong
+default for non-technical users. Candidates that are safer: Flathub Beta (a separate, clearly labeled
+Flatpak source), COPR repositories chosen one by one. Needs the maintainer to say what was meant.

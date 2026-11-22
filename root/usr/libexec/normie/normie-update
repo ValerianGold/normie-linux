@@ -16,8 +16,10 @@ set -u
 LIBEXEC=/usr/libexec/normie
 CONF=/etc/normie/update.conf
 LOG=/var/log/normie-update.log
+STATE=/var/lib/normie
 if [ "${NORMIE_TEST:-0}" = 1 ]; then
 	LIBEXEC="${NORMIE_LIBEXEC:-$LIBEXEC}"; CONF="${NORMIE_CONF:-$CONF}"; LOG="${NORMIE_LOG:-$LOG}"
+	STATE="${NORMIE_STATE:-$STATE}"
 fi
 DRY=0
 ONLY=all
@@ -63,15 +65,11 @@ s_net() {
 	return 1
 }
 
-s_repos() {  # RPM Fusion: needed for NVIDIA drivers, many codecs and extra software
-	local rel
-	rel="$(rpm -E %fedora 2>/dev/null || echo 45)"
-	for kind in free nonfree; do
-		if ! rpm -q "rpmfusion-$kind-release" >/dev/null 2>&1; then
-			run dnf install -y "https://mirrors.rpmfusion.org/$kind/fedora/rpmfusion-$kind-release-$rel.noarch.rpm" \
-				|| fail repos "Could not add the $kind software source."
-		fi
-	done
+s_repos() {  # Flathub, RPM Fusion (free, nonfree, tainted) and their AppStream data
+	local args=()
+	[ "$DRY" = 1 ] && args+=(--dry-run)
+	"$LIBEXEC/normie-sources" "${args[@]}" 2>&1 | tee -a "$LOG"
+	[ "${PIPESTATUS[0]}" -eq 0 ] || fail repos "Some software sources could not be set up."
 }
 
 s_deps() {  # install any newly listed compatibility libraries (data only, never code)
@@ -182,6 +180,9 @@ done
 say PROGRESS "100|Done"
 
 if [ "${#FAILED[@]}" -eq 0 ]; then
+	if [ "$DRY" != 1 ] && [ "$ONLY" = all ]; then  # the reminder reads this
+		mkdir -p "$STATE" && date +%s > "$STATE/last-update" && chmod 644 "$STATE/last-update"
+	fi
 	say RESULT "ok|everything is up to date"
 	exit 0
 fi

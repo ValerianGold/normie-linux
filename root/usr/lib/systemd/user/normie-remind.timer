@@ -1,0 +1,9 @@
+[Unit]
+Description=Daily check for the Update & Repair reminder (Normie Linux)
+
+[Timer]
+OnStartupSec=10min
+OnUnitActiveSec=1d
+
+[Install]
+WantedBy=timers.target

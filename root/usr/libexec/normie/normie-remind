@@ -1,0 +1,36 @@
+#!/bin/bash
+# normie-remind: a friendly reminder when it has been a while since Update & Repair ran.
+# Started daily by the user timer normie-remind.timer. Never changes the system.
+# Setting: REMIND_DAYS in /etc/normie/update.conf (default 14).
+CONF=/etc/normie/update.conf
+STATE_SYS=/var/lib/normie
+UDIR="${XDG_STATE_HOME:-$HOME/.local/state}/normie"
+GUI=/usr/libexec/normie/normie-update-gui
+now="$(date +%s)"
+if [ "${NORMIE_TEST:-0}" = 1 ]; then
+	CONF="${NORMIE_CONF:-$CONF}"; STATE_SYS="${NORMIE_STATE:-$STATE_SYS}"; UDIR="${NORMIE_USER_STATE:-$UDIR}"
+	GUI="${NORMIE_GUI:-$GUI}"; now="${NORMIE_NOW:-$now}"
+fi
+
+days="$(sed -n 's/^REMIND_DAYS="\{0,1\}\([0-9]\{1,4\}\)"\{0,1\}[[:space:]]*$/\1/p' "$CONF" 2>/dev/null | tail -1)"
+days="${days:-14}"
+mkdir -p "$UDIR" || exit 0
+
+last="$(cat "$STATE_SYS/last-update" 2>/dev/null)"
+if ! [[ "$last" =~ ^[0-9]+$ ]]; then          # never updated through the button: count from first sight
+	[ -r "$UDIR/first-seen" ] || echo "$now" > "$UDIR/first-seen"
+	last="$(cat "$UDIR/first-seen")"
+fi
+age=$(( (now - last) / 86400 ))
+[ "$age" -ge "$days" ] || exit 0
+
+reminded="$(cat "$UDIR/last-reminded" 2>/dev/null)"
+[[ "$reminded" =~ ^[0-9]+$ ]] || reminded=0
+[ $(( (now - reminded) / 86400 )) -ge 3 ] || exit 0     # at most once every 3 days
+echo "$now" > "$UDIR/last-reminded"
+
+action="$(timeout 900 notify-send --app-name="Update & Repair" --icon=system-software-update \
+	--action="update=Update now" "Time to update" \
+	"Your computer was last updated $age days ago. One click keeps your apps, drivers and system current.")"
+[ "$action" = update ] && exec "$GUI"
+exit 0

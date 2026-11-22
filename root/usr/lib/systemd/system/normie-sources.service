@@ -1,13 +1,13 @@
 [Unit]
-Description=Add the Flathub app store (Normie Linux)
+Description=Set up extra software sources: Flathub and RPM Fusion (Normie Linux)
 After=network-online.target
 Wants=network-online.target
-ConditionPathExists=!/var/lib/normie/flathub-done
+ConditionPathExists=!/var/lib/normie/sources-done
 
 [Service]
 # Type=simple so a slow or missing network can never delay the login screen
 Type=simple
-ExecStart=/usr/libexec/normie/normie-flathub
+ExecStart=/usr/libexec/normie/normie-sources
 
 [Install]
 WantedBy=multi-user.target

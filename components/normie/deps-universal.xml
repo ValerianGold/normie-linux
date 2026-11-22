@@ -14,7 +14,7 @@
   availability change between Fedora releases). If a group causes trouble, delete just that group.
 
   DELIBERATELY NOT HERE, because they conflict or need a decision (docs/DECISIONS.md):
-    ffmpeg, ffmpeg-libs        replaces Fedora's ffmpeg-free libraries (D-7)
+    ffmpeg, ffmpeg-libs        replaces Fedora's ffmpeg-free libraries (D-7); we use libavcodec-freeworld instead
     mesa-*-freeworld           replaces Fedora's Mesa codec drivers (D-7)
     steam, unrar, NVIDIA       need the RPM Fusion nonfree repository (D-5, D-8)
     Google Chrome              needs Google's repository (D-9)
@@ -163,6 +163,21 @@
 	-->
 	<packages type="image" patternType="plusRecommended" profiles="NormieFull">
 		<package name="mono-core"/>
+	</packages>
+
+	<!-- ===== Video and audio codecs, 64-bit (RPM Fusion) [MODERATE] =====
+	     Fixes video files whose AUDIO (or video) Fedora's limited libraries cannot decode, such as
+	     H.265/HEVC files with AC-3, E-AC-3 or DTS sound. libavcodec-freeworld ADDS codecs to
+	     Fedora's libavcodec-free instead of replacing it, so it needs no swap and cannot conflict
+	     with it (see docs/DECISIONS.md D-7). Previously only the 32-bit freeworld plugins were listed.
+	     mediainfo is a diagnostic: it tells you which codecs a file uses.
+	-->
+	<packages type="image" patternType="plusRecommended" profiles="NormieFull">
+		<package name="libavcodec-freeworld"/>
+		<package name="gstreamer1-plugins-bad-freeworld"/>
+		<package name="gstreamer1-plugins-ugly"/>
+		<package name="gstreamer1-libav"/>
+		<package name="mediainfo"/>
 	</packages>
 
 	<!-- ===== Software manager and firmware [SAFE] =====

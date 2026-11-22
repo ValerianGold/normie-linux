@@ -73,7 +73,9 @@ class Env:
         # fake normie-gpu that just records it was called and prints a protocol line
         w(f"{d}/libexec/normie-gpu",
           '#!/bin/sh\necho "normie-gpu $*" >> "$FAKE/calls"\necho "INFO|fake gpu step"\n', 0o755)
-        self.env = dict(os.environ, FAKE=d, NORMIE_TEST="1", NORMIE_LIBEXEC=f"{d}/libexec",
+        w(f"{d}/libexec/normie-sources",
+          '#!/bin/sh\necho "normie-sources $*" >> "$FAKE/calls"\n[ -e "$FAKE/sources-fails" ] && exit 1\necho "Software sources are ready"\n', 0o755)
+        self.env = dict(os.environ, FAKE=d, NORMIE_TEST="1", NORMIE_LIBEXEC=f"{d}/libexec", NORMIE_STATE=f"{d}/state",
                         NORMIE_CONF=f"{d}/update.conf", NORMIE_LOG=f"{d}/log", NORMIE_POWER=f"{d}/power",
                         PATH=f"{d}/bin:" + os.environ["PATH"])
 
@@ -98,8 +100,9 @@ class UpdateTests(unittest.TestCase):
         self.assertIn("PROGRESS|0|Checking your connection", out)
         self.assertIn("RESULT|ok|", out)
         self.assertIn("DRY|dnf upgrade --refresh -y", out)
-        # the only thing that may run is the GPU tool, and only in its own dry-run mode
-        self.assertEqual(e.calls().strip(), "normie-gpu apply --dry-run")
+        # the only things that may run are our own helpers, each in its own dry-run mode
+        self.assertEqual(e.calls().strip().splitlines(),
+                         ["normie-sources --dry-run", "normie-gpu apply --dry-run"])
 
     def test_dry_run_allowed_in_live_session_but_real_run_refused(self):
         e = Env()
@@ -134,12 +137,43 @@ class UpdateTests(unittest.TestCase):
         self.assertIn("RESULT|failed|no internet", out)
         self.assertEqual(e.calls(), "")
 
-    def test_missing_rpmfusion_gets_added_with_official_urls(self):
-        e = Env(installed=())
+    def test_button_runs_the_sources_setup_before_updating(self):
+        e = Env()
         e.run()
         c = e.calls()
-        self.assertIn("https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-45.noarch.rpm", c)
-        self.assertIn("https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-45.noarch.rpm", c)
+        self.assertIn("normie-sources", c)
+        self.assertLess(c.index("normie-sources"), c.index("dnf upgrade"))
+
+    def test_sources_failure_is_reported_but_update_continues(self):
+        e = Env()
+        open(f"{e.fake}/sources-fails", "w").close()
+        rc, out = e.run()
+        self.assertIn("dnf upgrade --refresh -y", e.calls())
+        self.assertIn("RESULT|partial|", out)
+        self.assertIn("software sources could not be set up", out)
+
+    def test_dry_run_passes_dry_run_to_sources(self):
+        e = Env()
+        e.run("--dry-run", root=False)
+        self.assertIn("normie-sources --dry-run", e.calls())
+
+    # ---- last-updated stamp (feeds the reminder)
+    def test_success_writes_last_update_stamp(self):
+        e = Env()
+        rc, out = e.run()
+        self.assertEqual(rc, 0, out)
+        with open(f"{e.fake}/state/last-update") as fh:
+            self.assertRegex(fh.read().strip(), r"^\d{10}$")
+
+    def test_failure_or_dry_run_or_gpu_only_do_not_write_stamp(self):
+        e = Env()
+        open(f"{e.fake}/dnf-fails", "w").close()
+        e.run()
+        self.assertFalse(os.path.exists(f"{e.fake}/state/last-update"))
+        e2 = Env()
+        e2.run("--dry-run", root=False)
+        e2.run("--only", "gpu")
+        self.assertFalse(os.path.exists(f"{e2.fake}/state/last-update"))
 
     def test_gpu_only_mode_skips_system_upgrade(self):
         e = Env()
@@ -247,61 +281,202 @@ class UpdateTests(unittest.TestCase):
         self.assertNotIn("fwupdmgr", e.calls())
 
 
-class FlathubScript(unittest.TestCase):
-    SCRIPT = os.path.join(HERE, "..", "root", "usr", "libexec", "normie", "normie-flathub")
+class SourcesScript(unittest.TestCase):
+    SCRIPT = os.path.join(HERE, "..", "root", "usr", "libexec", "normie", "normie-sources")
 
-    def make(self, remotes="", fail=False):
-        d = tempfile.mkdtemp(prefix="normie-fh-")
+    def make(self, remotes="", installed=(), dnf_fails=False, flatpak_fails=False, have_flatpak=True):
+        d = tempfile.mkdtemp(prefix="normie-src-")
         atexit.register(shutil.rmtree, d, True)
         os.makedirs(f"{d}/bin")
-        w(f"{d}/bin/flatpak", """#!/bin/sh
+        w(f"{d}/calls", "")
+        w(f"{d}/installed", "\n".join(installed) + "\n")
+        if have_flatpak:
+            w(f"{d}/bin/flatpak", """#!/bin/sh
 case "$1" in
   remotes) printf '%s' "$REMOTES" ;;
-  remote-add) echo "flatpak $*" >> "$FAKE/calls"; [ -n "$FAIL" ] && exit 1; exit 0 ;;
+  remote-add) echo "flatpak $*" >> "$FAKE/calls"; [ -n "$FLATPAK_FAILS" ] && exit 1; exit 0 ;;
 esac
 """, 0o755)
-        w(f"{d}/calls", "")
+        w(f"{d}/bin/rpm", """#!/bin/sh
+case "$1" in
+  -E) echo 45 ;;
+  -q) grep -qx "$2" "$FAKE/installed" && exit 0; exit 1 ;;
+esac
+""", 0o755)
+        w(f"{d}/bin/dnf", '#!/bin/sh\necho "dnf $*" >> "$FAKE/calls"\n[ -n "$DNF_FAILS" ] && exit 1\nexit 0\n', 0o755)
+        # a PATH with only our stubs plus the basics, so "no flatpak" is really "no flatpak"
+        for tool in ("bash", "sh", "grep", "seq", "sleep", "mkdir", "touch", "cat", "env"):
+            src = shutil.which(tool)
+            if src and not os.path.exists(f"{d}/bin/{tool}"):
+                os.symlink(src, f"{d}/bin/{tool}")
         env = dict(os.environ, FAKE=d, NORMIE_TEST="1", NORMIE_STATE=f"{d}/state", REMOTES=remotes,
-                   FAIL="1" if fail else "", PATH=f"{d}/bin:" + os.environ["PATH"])
+                   DNF_FAILS="1" if dnf_fails else "", FLATPAK_FAILS="1" if flatpak_fails else "",
+                   PATH=f"{d}/bin")
+        return d, env
+
+    def run_script(self, env, *args):
+        r = subprocess.run(["bash", self.SCRIPT, *args], env=env, capture_output=True, text=True)
+        return r.returncode, r.stdout
+
+    def calls(self, d):
+        with open(f"{d}/calls") as fh:
+            return fh.read()
+
+    def test_fresh_system_gets_everything_and_records_success(self):
+        d, env = self.make()
+        rc, out = self.run_script(env)
+        c = self.calls(d)
+        self.assertEqual(rc, 0, out)
+        self.assertIn("flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo", c)
+        self.assertIn("rpmfusion-free-release-45.noarch.rpm", c)
+        self.assertIn("rpmfusion-nonfree-release-45.noarch.rpm", c)
+        self.assertIn("--skip-unavailable rpmfusion-free-release-tainted rpmfusion-nonfree-release-tainted "
+                      "rpmfusion-free-appstream-data rpmfusion-nonfree-appstream-data", c)
+        self.assertTrue(os.path.exists(f"{d}/state/sources-done"))
+
+    def test_release_packages_are_installed_before_their_extras(self):
+        d, env = self.make()
+        self.run_script(env)
+        c = self.calls(d)
+        self.assertLess(c.index("rpmfusion-nonfree-release-45.noarch.rpm"), c.index("appstream-data"))
+
+    def test_everything_already_present_does_nothing_but_records_success(self):
+        d, env = self.make(remotes="flathub\n", installed=[
+            "rpmfusion-free-release", "rpmfusion-nonfree-release", "rpmfusion-free-release-tainted",
+            "rpmfusion-nonfree-release-tainted", "rpmfusion-free-appstream-data", "rpmfusion-nonfree-appstream-data"])
+        rc, out = self.run_script(env)
+        self.assertEqual(rc, 0)
+        self.assertEqual(self.calls(d), "")
+        self.assertTrue(os.path.exists(f"{d}/state/sources-done"))
+
+    def test_dry_run_changes_nothing_and_records_nothing(self):
+        d, env = self.make()
+        rc, out = self.run_script(env, "--dry-run")
+        self.assertEqual(rc, 0)
+        self.assertEqual(self.calls(d), "")
+        self.assertIn("DRY|flatpak remote-add", out)
+        self.assertFalse(os.path.exists(f"{d}/state/sources-done"))
+
+    def test_offline_fails_retries_and_does_not_record_success(self):
+        d, env = self.make(dnf_fails=True, flatpak_fails=True)
+        rc, out = self.run_script(env)
+        self.assertEqual(rc, 1)
+        self.assertFalse(os.path.exists(f"{d}/state/sources-done"))
+        self.assertEqual(self.calls(d).count("flatpak remote-add"), 6)   # retried six times
+
+    def test_extras_are_not_attempted_when_rpm_fusion_itself_failed(self):
+        d, env = self.make(dnf_fails=True)
+        self.run_script(env)
+        self.assertNotIn("appstream-data", self.calls(d))
+
+    def test_missing_flatpak_is_skipped_not_fatal(self):
+        d, env = self.make(have_flatpak=False)
+        rc, out = self.run_script(env)
+        self.assertEqual(rc, 0, out)
+        self.assertIn("skipping Flathub", out)
+
+    def test_services_are_enabled_and_cannot_block_the_login_screen(self):
+        root = os.path.join(HERE, "..", "root")
+        links = {
+            "etc/systemd/system/multi-user.target.wants/normie-sources.service": "/usr/lib/systemd/system/normie-sources.service",
+            "etc/systemd/system/sockets.target.wants/snapd.socket": "/usr/lib/systemd/system/snapd.socket",
+            "etc/systemd/user/timers.target.wants/normie-remind.timer": "/usr/lib/systemd/user/normie-remind.timer",
+            "snap": "/var/lib/snapd/snap",
+        }
+        for rel, target in links.items():
+            p = os.path.join(root, rel)
+            self.assertTrue(os.path.islink(p), rel)
+            self.assertEqual(os.readlink(p), target)
+        with open(os.path.join(root, "usr/lib/systemd/system/normie-sources.service")) as fh:
+            unit = fh.read()
+        self.assertIn("Type=simple", unit)
+        self.assertIn("ConditionPathExists=!/var/lib/normie/sources-done", unit)
+
+
+class Reminder(unittest.TestCase):
+    SCRIPT = os.path.join(HERE, "..", "root", "usr", "libexec", "normie", "normie-remind")
+    DAY = 86400
+    T0 = 1_800_000_000
+
+    def make(self, last_update_days_ago=None, conf="", notify_answer="", first_seen_days_ago=None, reminded_days_ago=None):
+        d = tempfile.mkdtemp(prefix="normie-rem-")
+        atexit.register(shutil.rmtree, d, True)
+        for sub in ("bin", "sys", "user"):
+            os.makedirs(f"{d}/{sub}")
+        w(f"{d}/calls", "")
+        w(f"{d}/conf", conf)
+        if last_update_days_ago is not None:
+            w(f"{d}/sys/last-update", f"{self.T0 - last_update_days_ago * self.DAY}\n")
+        if first_seen_days_ago is not None:
+            w(f"{d}/user/first-seen", f"{self.T0 - first_seen_days_ago * self.DAY}\n")
+        if reminded_days_ago is not None:
+            w(f"{d}/user/last-reminded", f"{self.T0 - reminded_days_ago * self.DAY}\n")
+        w(f"{d}/bin/notify-send", f'#!/bin/sh\necho "notify $*" >> "$FAKE/calls"\necho "{notify_answer}"\n', 0o755)
+        w(f"{d}/gui", '#!/bin/sh\necho "gui started" >> "$FAKE/calls"\n', 0o755)
+        env = dict(os.environ, FAKE=d, NORMIE_TEST="1", NORMIE_CONF=f"{d}/conf", NORMIE_STATE=f"{d}/sys",
+                   NORMIE_USER_STATE=f"{d}/user", NORMIE_GUI=f"{d}/gui", NORMIE_NOW=str(self.T0),
+                   PATH=f"{d}/bin:" + os.environ["PATH"])
         return d, env
 
     def run_script(self, env):
-        r = subprocess.run(["bash", self.SCRIPT], env=env, capture_output=True, text=True)
-        return r.returncode, r.stdout
+        return subprocess.run(["bash", self.SCRIPT], env=env, capture_output=True, text=True)
 
-    def test_adds_flathub_and_records_success(self):
-        d, env = self.make()
-        rc, out = self.run_script(env)
-        self.assertEqual(rc, 0, out)
+    def calls(self, d):
         with open(f"{d}/calls") as fh:
-            self.assertIn("remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo", fh.read())
-        self.assertTrue(os.path.exists(f"{d}/state/flathub-done"))
+            return fh.read()
 
-    def test_already_present_does_nothing_but_records_success(self):
-        d, env = self.make(remotes="flathub\n")
-        rc, out = self.run_script(env)
-        self.assertEqual(rc, 0)
-        with open(f"{d}/calls") as fh:
-            self.assertEqual(fh.read(), "")
-        self.assertTrue(os.path.exists(f"{d}/state/flathub-done"))
+    def test_recent_update_means_no_reminder(self):
+        d, env = self.make(last_update_days_ago=3)
+        self.run_script(env)
+        self.assertEqual(self.calls(d), "")
 
-    def test_offline_fails_without_recording_success_so_it_retries_next_boot(self):
-        d, env = self.make(fail=True)
-        rc, out = self.run_script(env)
-        self.assertEqual(rc, 1)
-        self.assertFalse(os.path.exists(f"{d}/state/flathub-done"))
-        with open(f"{d}/calls") as fh:
-            self.assertEqual(len(fh.read().splitlines()), 6)      # retried six times
+    def test_old_update_shows_reminder_with_days_and_action(self):
+        d, env = self.make(last_update_days_ago=20)
+        self.run_script(env)
+        c = self.calls(d)
+        self.assertIn("notify", c)
+        self.assertIn("20 days ago", c)
+        self.assertIn("--action=update=Update now", c)
 
-    def test_service_is_enabled_and_cannot_block_the_login_screen(self):
-        root = os.path.join(HERE, "..", "root")
-        link = os.path.join(root, "etc/systemd/system/multi-user.target.wants/normie-flathub.service")
-        self.assertTrue(os.path.islink(link))
-        self.assertEqual(os.readlink(link), "/usr/lib/systemd/system/normie-flathub.service")
-        with open(os.path.join(root, "usr/lib/systemd/system/normie-flathub.service")) as fh:
-            unit = fh.read()
-        self.assertIn("Type=simple", unit)
-        self.assertIn("ConditionPathExists=!/var/lib/normie/flathub-done", unit)
+    def test_clicking_update_now_opens_the_window(self):
+        d, env = self.make(last_update_days_ago=20, notify_answer="update")
+        self.run_script(env)
+        self.assertIn("gui started", self.calls(d))
+
+    def test_dismissing_does_not_open_the_window(self):
+        d, env = self.make(last_update_days_ago=20, notify_answer="")
+        self.run_script(env)
+        self.assertNotIn("gui started", self.calls(d))
+
+    def test_at_most_once_every_three_days(self):
+        d, env = self.make(last_update_days_ago=20, reminded_days_ago=1)
+        self.run_script(env)
+        self.assertEqual(self.calls(d), "")
+        d2, env2 = self.make(last_update_days_ago=20, reminded_days_ago=4)
+        self.run_script(env2)
+        self.assertIn("notify", self.calls(d2))
+
+    def test_never_updated_counts_from_first_sight_not_from_forever(self):
+        d, env = self.make()                    # no stamp, no first-seen: starts the clock, no nagging
+        self.run_script(env)
+        self.assertEqual(self.calls(d), "")
+        self.assertTrue(os.path.exists(f"{d}/user/first-seen"))
+        d2, env2 = self.make(first_seen_days_ago=30)
+        self.run_script(env2)
+        self.assertIn("30 days ago", self.calls(d2))
+
+    def test_remind_days_setting_is_respected(self):
+        d, env = self.make(last_update_days_ago=5, conf='REMIND_DAYS=3\n')
+        self.run_script(env)
+        self.assertIn("notify", self.calls(d))
+        d2, env2 = self.make(last_update_days_ago=20, conf='REMIND_DAYS="30"\n')
+        self.run_script(env2)
+        self.assertEqual(self.calls(d2), "")
+
+    def test_timer_is_not_active_in_the_live_session(self):
+        unit = os.path.join(HERE, "..", "root", "usr", "lib", "systemd", "user", "normie-remind.service")
+        with open(unit) as fh:
+            self.assertIn("ConditionPathExists=!/run/initramfs/livedev", fh.read())
 
 
 if __name__ == "__main__":
