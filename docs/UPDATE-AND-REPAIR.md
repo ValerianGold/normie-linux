@@ -12,9 +12,31 @@ not yet run on a real installed system or a real NVIDIA card. See "Not yet verif
 | 2 | Set up software sources | Adds RPM Fusion free and nonfree using RPM Fusion's official release packages |
 | 3 | Add missing compatibility libraries | Downloads `dist/normie-deps.list` from GitHub (names only) and installs what is missing |
 | 4 | Update the system | `dnf upgrade --refresh -y` |
-| 5 | Update apps | `flatpak update` |
-| 6 | Graphics drivers | `normie-gpu apply` (see below) |
-| 7 | Finish | Asks for a restart if a new Linux kernel was installed |
+| 5 | Update apps | Makes sure Flathub is configured, then `flatpak update` |
+| 6 | Firmware | **Off by default.** With `FIRMWARE="yes"` in `update.conf`: `fwupdmgr` update, only while plugged in |
+| 7 | Graphics drivers | `normie-gpu apply` (see below) |
+| 8 | Finish | Asks for a restart if a new Linux kernel was installed |
+
+### Why firmware is off by default, and why not everything updates blindly
+
+The goal is to keep everything current. Every update type except firmware can be undone by
+restoring a snapshot, so those are on. A firmware update cannot be undone that way, and a failure
+(power loss mid-flash, a bad update) can leave a device unusable. So firmware is opt-in until the
+snapshot and restore feature exists, and even then it only runs on AC power. Fedora release
+upgrades (45 to 46) are a separate, confirmed step for the same reason. The button does **not**
+yet take snapshots; that is the most important missing piece (ROADMAP M4).
+
+What "repair" means today, honestly: it re-adds any missing package from the dependency list,
+re-adds the software sources, and rebuilds the NVIDIA driver. It does not yet verify or repair
+damaged system files.
+
+### The app store (Flathub)
+
+KDE's software center (Discover) only shows what its configured sources offer. Fedora KDE does not
+enable Flathub, the large catalog that has Chrome, Steam, Discord, VLC and most popular apps.
+`normie-flathub.service` adds it automatically at boot (retrying at each start until it works once),
+and the button re-checks it. Fedora's GNOME edition shows Chrome in its software center through
+Fedora's optional "third-party repositories" setting; KDE has no equivalent switch turned on.
 
 Pressing it asks for the administrator password once (polkit). It is also in the application
 menu and on the desktop. Where things live:
@@ -23,6 +45,7 @@ menu and on the desktop. Where things live:
 |---|---|
 | `usr/libexec/normie/normie-update` | The backend script (bash) |
 | `usr/libexec/normie/normie-gpu` | NVIDIA detection and driver management (Python) |
+| `usr/libexec/normie/normie-flathub` + `usr/lib/systemd/system/normie-flathub.service` | Adds Flathub at boot |
 | `usr/libexec/normie/normie-update-gui` | The window (PyQt6). Thin: it only displays what the backend reports |
 | `usr/share/applications/normie-update.desktop` | Menu entry (a copy sits in `etc/skel/Desktop/` for the desktop icon) |
 | `usr/share/polkit-1/actions/org.normielinux.update.policy` | The password prompt |

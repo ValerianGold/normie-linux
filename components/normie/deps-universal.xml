@@ -167,12 +167,10 @@
 
 	<!-- ===== Software manager and firmware [SAFE] =====
 	     Needed so users can install apps (for example Chrome) from the software center.
-	     This installs the Flatpak support; the Flathub repository itself is configured
-	     separately (see docs/ROADMAP.md M2).
+	     Flatpak and its Discover plugin are in tools.xml (base ISO). The Flathub repository is
+	     added by normie-flathub.service at boot and by the Update & Repair button.
 	-->
 	<packages type="image" patternType="plusRecommended" profiles="NormieFull">
-		<package name="flatpak"/>
-		<package name="plasma-discover-flatpak"/>
 		<package name="fwupd"/>
 		<package name="alsa-sof-firmware"/>
 	</packages>

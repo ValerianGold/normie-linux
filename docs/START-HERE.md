@@ -49,9 +49,14 @@ tools/build.sh
 Optional: test the ISO in a VM before touching real hardware:
 
 ```
-qemu-system-x86_64 -enable-kvm -cpu host -m 6G -smp 4 \
+qemu-system-x86_64 -enable-kvm -cpu host -m 8G -smp 4 \
+  -audiodev pipewire,id=snd0 -device intel-hda -device hda-output,audiodev=snd0 \
   -cdrom ~/normie-linux-out/Normie-Live-build/*.iso -boot d
 ```
+
+The two `-audiodev`/`-device` lines give the VM a sound card (without them it shows no audio output).
+If your QEMU rejects `pipewire`, use `-audiodev pa,id=snd0` instead. For the full ISO, replace
+`Normie-Live-build` with `Normie-Full-Live-build`.
 
 ## 3. Milestone 2: the full ISO (do NOT skip the preflight)
 

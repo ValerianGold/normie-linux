@@ -59,20 +59,21 @@ The general rules for avoiding conflicts are in `DEPENDENCY-POLICY.md`.
 - Redistribution of NVIDIA and other RPM Fusion nonfree packages must be checked before publishing.
 - Fedora branding must be removed first (M6).
 
-## D-9 Google Chrome: OPEN
-Xodus Nexus's docs say Chrome is required for its passkey/security-key sign-in option; the field report
-found sign-in only worked with Chrome. Chrome is not in Fedora's repositories. Options:
-(a) install it at first boot or through Update & Repair from Google's repository (no redistribution question);
-(b) bundle it in the ISO (needs a check of Google's redistribution terms; I would not assume it is allowed);
-(c) leave it out and rely on a clear one-click "Install Chrome" action.
-Leaning (a), and it fits the Update & Repair design (D-6).
+## D-9 Google Chrome: PARTLY DECIDED
+Chrome is not in Fedora's repositories and Discover did not list it in the first VM test. Fix in place:
+Flathub is now enabled automatically, which gives Discover a full catalog including Chrome (Flatpak).
+Open: Xodus Nexus needs Chrome for passkey sign-in and may expect the normal (RPM) Chrome rather than the
+Flatpak one. TEST both with Nexus's sign-in before choosing which one to recommend. Downloading Google's
+`.rpm` and double-clicking it already works (it opens the software center and also adds Google's repository
+so Chrome then updates with everything else). KDE draws `.rpm` files with an archive-style icon because it
+treats them as archives, which is cosmetic.
+We do not bundle Chrome in the ISO (redistribution terms are Google's to grant).
 
-## D-10 Older Java and .NET versions: OPEN
-Fedora 45 ships only OpenJDK 25 and .NET 10. Java 8, 17 and 21 exist as Eclipse Temurin from the
-Adoptium repository (a separate repository, off by default). Many launchers, Minecraft included,
-download their own Java, so this may not matter. Decide whether Update & Repair should enable
-Adoptium and install Temurin 8/17/21, or leave it to the apps.
-
-## D-11 Updating the tools themselves: DECIDED (not built)
-The scripts will update through an RPM in our own signed repository (Milestone 3), never by running
-code fetched from raw GitHub as root. Only data (the package-name list) is fetched from GitHub.
+## D-12 Where the Update & Repair button lives: OPEN
+Requested: a button in the Start menu next to Sleep / Restart / Shut Down. Plasma's menu draws that row
+itself and offers no way to add entries to it. Adding one means modifying the menu's own QML files, and
+Plasma updates would overwrite the change (or break it) on the same machines we update automatically.
+Alternatives that still keep the desktop clean and the button impossible to forget:
+(1) pin it as a favorite at the top of the Start menu; (2) a panel or tray icon; (3) a periodic reminder
+notification ("last updated 14 days ago") with an Update now button. Needs one read-only look at how this
+Plasma version stores menu favorites before writing it. Not built.

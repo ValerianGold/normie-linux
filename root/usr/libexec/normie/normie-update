@@ -104,7 +104,32 @@ s_upgrade() {
 
 s_flatpak() {
 	if ! command -v flatpak >/dev/null 2>&1; then say INFO "Flatpak not installed; skipping."; return 0; fi
+	run flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo \
+		|| say WARN "Could not add the Flathub app store; will try again next time."
 	run flatpak update -y --noninteractive || fail flatpak "Some apps could not be updated."
+}
+
+on_ac() {  # true on a desktop, or a laptop that is plugged in
+	local dir="${NORMIE_POWER:-/sys/class/power_supply}" d have_mains=0 online=0
+	[ "${NORMIE_TEST:-0}" = 1 ] || dir=/sys/class/power_supply
+	for d in "$dir"/*; do
+		[ -r "$d/type" ] || continue
+		if [ "$(cat "$d/type")" = Mains ]; then have_mains=1; [ "$(cat "$d/online" 2>/dev/null)" = 1 ] && online=1; fi
+	done
+	[ "$have_mains" -eq 0 ] && return 0     # no battery/mains info (desktop or VM): assume plugged in
+	[ "$online" -eq 1 ]
+}
+
+s_firmware() {  # firmware cannot be rolled back by a snapshot, so it is opt-in (see update.conf)
+	if [ "${FIRMWARE:-no}" != yes ]; then say INFO "Firmware updates are off (FIRMWARE=yes in /etc/normie/update.conf turns them on)."; return 0; fi
+	if ! command -v fwupdmgr >/dev/null 2>&1; then say INFO "fwupd not installed; skipping firmware."; return 0; fi
+	if ! on_ac; then say INFO "Skipping firmware updates while on battery power."; return 0; fi
+	run fwupdmgr refresh --force >/dev/null 2>&1
+	run fwupdmgr update -y --no-reboot-check
+	local rc=$?
+	# fwupdmgr exits 2 when there is simply nothing to update
+	[ "$rc" -eq 0 ] || [ "$rc" -eq 2 ] || fail firmware "Some firmware updates did not finish."
+	[ "$DRY" = 1 ] || say INFO "Firmware updates are applied during the next restart."
 }
 
 s_gpu() {
@@ -140,7 +165,8 @@ case "$ONLY" in
 	gpu) STEPS=(net:"Checking your connection" repos:"Setting up software sources" gpu:"Checking graphics drivers" finish:"Finishing up") ;;
 	*)   STEPS=(net:"Checking your connection" repos:"Setting up software sources"
 	            deps:"Adding any missing compatibility libraries" upgrade:"Updating your system"
-	            flatpak:"Updating your apps" gpu:"Checking graphics drivers" finish:"Finishing up") ;;
+	            flatpak:"Updating your apps" firmware:"Checking for firmware updates"
+	            gpu:"Checking graphics drivers" finish:"Finishing up") ;;
 esac
 
 total=${#STEPS[@]}

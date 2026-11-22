@@ -1,0 +1,13 @@
+[Unit]
+Description=Add the Flathub app store (Normie Linux)
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=!/var/lib/normie/flathub-done
+
+[Service]
+# Type=simple so a slow or missing network can never delay the login screen
+Type=simple
+ExecStart=/usr/libexec/normie/normie-flathub
+
+[Install]
+WantedBy=multi-user.target
