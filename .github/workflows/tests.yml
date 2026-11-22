@@ -1,0 +1,19 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unit tests (simulated hardware, fake system commands; change nothing)
+        run: python3 -m unittest discover -s tests -v
+      - name: KIWI image description is structurally sound
+        run: |
+          python3 tools/validate-kiwi.py
+          python3 tools/validate-kiwi.py Fedora.kiwi KDE-Desktop-Live
+      - name: Published dependency list matches the package files
+        run: python3 tools/export-deps.py --check

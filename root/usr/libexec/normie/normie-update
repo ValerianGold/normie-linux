@@ -34,6 +34,8 @@ done
 # shellcheck disable=SC1090
 [ -r "$CONF" ] && . "$CONF"
 DEPS_LIST_URL="${DEPS_LIST_URL:-}"
+# shellcheck disable=SC1091
+. "$LIBEXEC/normie-lib.sh"
 
 touch "$LOG" 2>/dev/null || LOG="/tmp/normie-update.log"
 
@@ -76,24 +78,24 @@ s_deps() {  # install any newly listed compatibility libraries (data only, never
 	if [ -z "$DEPS_LIST_URL" ]; then say INFO "No online dependency list configured; skipping."; return 0; fi
 	case "$DEPS_LIST_URL" in https://*) ;; *) fail deps "Dependency list must use https://. Skipping."; return 0 ;; esac
 	if [ "$DRY" = 1 ]; then say DRY "download $DEPS_LIST_URL and install the packages it lists"; return 0; fi
-	local tmp valid=() line
-	tmp="$(mktemp)"
-	if ! curl -fsSL --max-time 30 --max-filesize 1048576 -o "$tmp" "$DEPS_LIST_URL"; then
-		rm -f "$tmp"; fail deps "Could not download the dependency list. Skipping."; return 0
-	fi
-	while IFS= read -r line; do
-		line="${line%%#*}"; line="${line//[[:space:]]/}"
-		[ -z "$line" ] && continue
-		# package names only: must start with a letter or digit (so it can never act as an option)
-		if [[ "$line" =~ ^[A-Za-z0-9][A-Za-z0-9._+-]{0,100}$ ]]; then valid+=("$line")
-		else say WARN "Ignoring an invalid line in the dependency list."; fi
-	done < "$tmp"
-	rm -f "$tmp"
-	if [ "${#valid[@]}" -eq 0 ] || [ "${#valid[@]}" -gt 3000 ]; then
-		fail deps "The dependency list looked wrong (${#valid[@]} entries). Skipping."; return 0
-	fi
+	local list rc valid=()
+	list="$(mktemp)"
+	normie_fetch_list "$DEPS_LIST_URL" "$list"; rc=$?
+	[ "$NORMIE_LIST_INVALID" -gt 0 ] && say WARN "Ignoring $NORMIE_LIST_INVALID invalid line(s) in the dependency list."
+	case "$rc" in
+		0) ;;
+		1) rm -f "$list"; fail deps "Could not download the dependency list. Skipping."; return 0 ;;
+		*) rm -f "$list"; fail deps "The dependency list looked wrong. Skipping."; return 0 ;;
+	esac
+	mapfile -t valid < "$list"
 	say INFO "Checking ${#valid[@]} compatibility libraries"
-	run dnf install -y --skip-unavailable "${valid[@]}" || fail deps "Some compatibility libraries could not be installed."
+	if run dnf install -y --skip-unavailable "${valid[@]}"; then
+		# remember WHICH version of the list is applied, so the reminder can tell when a newer one exists
+		mkdir -p "$STATE" && normie_list_hash "$list" > "$STATE/deps-applied" && chmod 644 "$STATE/deps-applied"
+	else
+		fail deps "Some compatibility libraries could not be installed."
+	fi
+	rm -f "$list"
 }
 
 s_upgrade() {

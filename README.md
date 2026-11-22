@@ -3,9 +3,11 @@
 A beginner-friendly Linux distribution, based on Fedora, built so that ordinary
 users never have to open a terminal.
 
-> **Status: early development.** The project currently builds a Fedora 45 KDE
-> live ISO under the Normie name (Milestone 1). The features below are the
-> goals; see [docs/ROADMAP.md](docs/ROADMAP.md) for what exists today.
+> **Status: alpha, source only.** The system builds, boots, installs, updates itself and sets up NVIDIA
+> graphics drivers (tested on one real machine so far). **There are no public ISOs yet:** Fedora's branding has
+> to be replaced first ([docs/REBRANDING.md](docs/REBRANDING.md)). No snapshots or rollback yet, and the
+> tools themselves update only by reinstalling until our own package repository exists
+> ([docs/ROADMAP.md](docs/ROADMAP.md)). Not for anything important.
 
 ## Goals
 
@@ -42,7 +44,8 @@ tools/build.sh                      # builds the Normie-Live ISO (Milestone 1)
 | `tools/` | `build.sh`, `validate-kiwi.py`, `check-packages.py`, `solve-check.py`, `export-deps.py`. |
 | `dist/` | `normie-deps.list`: the dependency list the Update & Repair button fetches from GitHub. |
 | `tests/` | Automated tests (simulated GPUs, fake commands). |
-| `docs/` | Start-here guide, roadmap, design decisions, list of changes to Fedora's files. |
+| `docs/` | Start-here guide, roadmap, design decisions, how fixes roll out, rebranding plan, publishing steps. |
+| `.github/` | Automated checks and the issue forms ("an app will not run", bug report). |
 | everything else | Fedora's KIWI descriptions, kept unmodified where possible so upstream updates merge cleanly. See [docs/UPSTREAM-CHANGES.md](docs/UPSTREAM-CHANGES.md). |
 
 ## License

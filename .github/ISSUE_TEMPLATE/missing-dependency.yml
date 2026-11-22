@@ -1,0 +1,49 @@
+name: An app or game will not run
+description: Something will not start, or fails with a missing file or library
+title: "[app] "
+labels: ["missing-dependency"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. Most problems like this are one missing library, and a fix reaches everyone
+        through the Update & Repair button without reinstalling. The more you can tell us, the faster.
+  - type: input
+    id: app
+    attributes:
+      label: Which app or game?
+      placeholder: "for example: Xodus Nexus, a game on Steam, an old Windows program"
+    validations:
+      required: true
+  - type: dropdown
+    id: source
+    attributes:
+      label: How did you install it?
+      options:
+        - From the software center (Flatpak / Flathub)
+        - From the software center (RPM Fusion or Fedora)
+        - Downloaded a file from the internet (.rpm, .AppImage, .exe)
+        - Through Steam or another launcher
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happens?
+      description: Does nothing, closes straight away, shows an error? Paste any message you see.
+    validations:
+      required: true
+  - type: textarea
+    id: terminal
+    attributes:
+      label: Optional, if you are comfortable with the terminal
+      description: |
+        Start the app from a terminal and paste the last lines it prints. For a program you downloaded,
+        `ldd path/to/the-program | grep "not found"` lists missing libraries.
+      render: shell
+  - type: input
+    id: version
+    attributes:
+      label: Normie Linux version
+      description: Open Settings, then About this System. Updating first with the Update & Repair button may already fix it.

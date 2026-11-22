@@ -1,0 +1,24 @@
+name: Something else is wrong
+description: A bug in Normie Linux itself (installer, Update & Repair, graphics driver setup, ...)
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What went wrong, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: What did you do just before it happened?
+  - type: textarea
+    id: log
+    attributes:
+      label: Update & Repair log (if it involves updating)
+      description: The file is /var/log/normie-update.log. The window's "Show details" button shows the same text.
+      render: text
+  - type: input
+    id: hardware
+    attributes:
+      label: Computer and graphics card (if it involves graphics or drivers)

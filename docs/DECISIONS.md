@@ -75,17 +75,18 @@ Requested: a button in the Start menu next to Sleep / Restart / Shut Down. Plasm
 offers no way to add entries; adding one means modifying the menu's own QML, which Plasma updates would
 overwrite on machines we update automatically. Agreed alternative: pin it at the top of the Start menu
 (favorites) plus a periodic reminder.
-- Reminder: BUILT (`normie-remind`, see UPDATE-AND-REPAIR.md).
-- Pin: NOT built. A wrong guess here could wipe the user's default favorites, so it waits for a look at how
-  this Plasma version stores them (`grep -rn favorites ~/.config/plasma-org.kde.plasma.desktop-appletsrc`
-  on an installed system).
+- Reminder: BUILT (`normie-remind`), now also announces "Compatibility fixes are available".
+- Pin: NOT built. Not because pinning is dangerous in itself. A fresh install does have default favorites;
+  the problem is that they are not necessarily stored in the user's config yet, so a script that "adds one"
+  to an empty stored list could REPLACE the defaults (Firefox, Files, ...) instead of extending them, and
+  the config format differs between Plasma versions. It waits for one read-only look at how this Plasma
+  version stores them (`grep -rn favorites ~/.config/plasma-org.kde.plasma.desktop-appletsrc` on an
+  installed system).
 
-## D-13 Snap: DECIDED (by the maintainer), with known trade-offs
-Enabled out of the box (`snapd`, `plasma-discover-snap`, socket enabled). Known trade-offs: the Snap Store has
-had scam and malware snaps (Flathub has verified publishers, the Snap Store less so); `snapd` adds a
-background service and many small mounts; most apps are on Flathub anyway, so Snap mostly duplicates it. To
-remove it: delete `snapd` and `plasma-discover-snap` from `components/normie/tools.xml` and the two snap
-symlinks under `root/` (`root/snap` and `root/etc/systemd/system/sockets.target.wants/snapd.socket`).
+## D-13 Snap: REMOVED
+Snap was added on request, then removed by the maintainer: it adds little (nearly everything is on Flathub),
+adds a background service, and the Snap Store has had scam and malware snaps. A test
+(`NoSnap` in `tests/test_normie_update.py`) keeps it out.
 
 ## D-14 Fedora release upgrades (45 to 46): PLANNED, not built
 Likely to break, in order of probability: third-party repositories not ready for the new release on day one
@@ -103,8 +104,15 @@ Plan, using GitHub for the parts that are data:
 5. The upgrade logic itself ships as an RPM from our own repository (Milestone 3), so a fixed upgrader runs
    BEFORE the upgrade. Scripts cannot update safely from raw GitHub (D-11).
 
-## D-15 "Experimental" software sources: OPEN
-Not enabled: Fedora's `updates-testing` repository. It delivers updates before they are tested and is the
-likeliest source of breakage; combined with one-click automatic updates and no rollback it is the wrong
-default for non-technical users. Candidates that are safer: Flathub Beta (a separate, clearly labeled
-Flatpak source), COPR repositories chosen one by one. Needs the maintainer to say what was meant.
+## D-15 "Experimental" software: DECIDED (experimental apps)
+Meaning confirmed: experimental **apps**, while staying inside the software center. Flathub Beta is added as a
+separate Flatpak source at the lowest priority (`--prio=0`), so the stable version of an app is preferred; it
+is optional and never blocks the rest of the setup. Switch off with `FLATHUB_BETA="no"` in `update.conf`.
+Still to confirm in the software center: how Discover displays an app that exists in both sources.
+Not enabled, on purpose: Fedora's `updates-testing` repository (pre-release system updates; the likeliest
+source of breakage, and automatic updates plus no rollback make it a poor default).
+
+## D-16 Rebranding approach: PLANNED
+Fork `generic-release` into our own `normie-release` (plus logos and release notes), keeping `system-release`,
+`%fedora`/`.fc45`, `ID_LIKE=fedora` and the service presets so Fedora's repositories and upgrades keep working.
+Needs our own package repository first. Details, stages and the open legal question: `REBRANDING.md`.

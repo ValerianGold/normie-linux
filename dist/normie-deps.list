@@ -217,7 +217,6 @@ pipewire-libs.i686
 pipewire-pulseaudio
 pkgconf-pkg-config
 plasma-discover-flatpak
-plasma-discover-snap
 polkit
 pulseaudio-libs.i686
 python3
@@ -244,7 +243,6 @@ SDL3_mixer.i686
 SDL3_net.i686
 SDL3_sound.i686
 SDL3_ttf.i686
-snapd
 sqlite-libs.i686
 steam-devices
 systemd-libs.i686

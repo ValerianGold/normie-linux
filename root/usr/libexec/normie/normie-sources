@@ -2,20 +2,23 @@
 # normie-sources: set up the extra software sources so the software center (Discover) has a
 # huge catalog out of the box:
 #   - Flathub (Flatpak apps: Chrome, Steam, Discord, VLC, ...)
+#   - Flathub Beta (experimental apps, a separate clearly labeled source; lowest priority so
+#     the stable version of an app is always preferred; switch off with FLATHUB_BETA="no")
 #   - RPM Fusion free + nonfree (codecs, NVIDIA drivers, Steam, extra software) with the
 #     "tainted" repositories and the AppStream data that makes them show up in Discover
 # Runs at boot from normie-sources.service until everything succeeds once, and from the
 # Update & Repair button. Every step is idempotent; running it again is harmless.
 #   normie-sources            do it
 #   normie-sources --dry-run  print what it would do
-# (Snap is handled separately: snapd and its Discover plugin are installed packages.)
 STATE=/var/lib/normie
 FLATHUB_URL=https://dl.flathub.org/repo/flathub.flatpakrepo
+FLATHUB_BETA_URL=https://flathub.org/beta-repo/flathub-beta.flatpakrepo
+CONF=/etc/normie/update.conf
 TRIES=6
 PAUSE=20
 DRY=0
 [ "${1:-}" = --dry-run ] && DRY=1
-if [ "${NORMIE_TEST:-0}" = 1 ]; then STATE="${NORMIE_STATE:-$STATE}"; PAUSE=0; fi
+if [ "${NORMIE_TEST:-0}" = 1 ]; then STATE="${NORMIE_STATE:-$STATE}"; CONF="${NORMIE_CONF:-$CONF}"; PAUSE=0; fi
 
 run() { if [ "$DRY" = 1 ]; then echo "DRY|$*"; return 0; fi; "$@"; }
 retry() {  # the network may not be ready, or another package tool may hold the lock
@@ -30,6 +33,13 @@ ok=1
 if command -v flatpak >/dev/null 2>&1; then
 	if ! flatpak remotes --system --columns=name 2>/dev/null | grep -qx flathub; then
 		retry run flatpak remote-add --system --if-not-exists flathub "$FLATHUB_URL" || { echo "Could not add Flathub"; ok=0; }
+	fi
+	# Experimental apps: optional, so a failure here never stops the rest or blocks the "done" stamp
+	if ! grep -qiE '^FLATHUB_BETA="?no"?[[:space:]]*$' "$CONF" 2>/dev/null; then
+		if ! flatpak remotes --system --columns=name 2>/dev/null | grep -qx flathub-beta; then
+			retry run flatpak remote-add --system --if-not-exists --prio=0 flathub-beta "$FLATHUB_BETA_URL" \
+				|| echo "Could not add Flathub Beta (optional); the Update & Repair button will try again"
+		fi
 	fi
 else
 	echo "flatpak is not installed; skipping Flathub"

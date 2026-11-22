@@ -13,8 +13,5 @@
 		<package name="curl"/>
 		<package name="flatpak"/>
 		<package name="plasma-discover-flatpak"/>
-		<!-- Snap, by request (see docs/DECISIONS.md D-13). snapd.socket is enabled by an overlay symlink. -->
-		<package name="snapd"/>
-		<package name="plasma-discover-snap"/>
 	</packages>
 </image>

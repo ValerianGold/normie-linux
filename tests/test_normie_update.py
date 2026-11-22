@@ -13,6 +13,13 @@ import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 UPDATE = os.path.join(HERE, "..", "root", "usr", "libexec", "normie", "normie-update")
+LIB = os.path.abspath(os.path.join(HERE, "..", "root", "usr", "libexec", "normie", "normie-lib.sh"))
+
+
+def names_hash(names):
+    """The fingerprint normie-lib.sh computes: sorted, de-duplicated names, one per line."""
+    import hashlib
+    return hashlib.sha256(("\n".join(sorted(set(names))) + "\n").encode()).hexdigest()
 
 
 def w(path, text, mode=None):
@@ -73,6 +80,7 @@ class Env:
         # fake normie-gpu that just records it was called and prints a protocol line
         w(f"{d}/libexec/normie-gpu",
           '#!/bin/sh\necho "normie-gpu $*" >> "$FAKE/calls"\necho "INFO|fake gpu step"\n', 0o755)
+        os.symlink(LIB, f"{d}/libexec/normie-lib.sh")
         w(f"{d}/libexec/normie-sources",
           '#!/bin/sh\necho "normie-sources $*" >> "$FAKE/calls"\n[ -e "$FAKE/sources-fails" ] && exit 1\necho "Software sources are ready"\n', 0o755)
         self.env = dict(os.environ, FAKE=d, NORMIE_TEST="1", NORMIE_LIBEXEC=f"{d}/libexec", NORMIE_STATE=f"{d}/state",
@@ -191,7 +199,19 @@ class UpdateTests(unittest.TestCase):
         self.assertEqual(len(install), 1, e.calls())
         self.assertEqual(install[0], "dnf install -y --skip-unavailable gcc-c++ libXtst.i686 webkit2gtk4.1")
         self.assertNotIn("installroot", e.calls())
-        self.assertIn("Ignoring an invalid line", out)
+        self.assertIn("invalid line", out)
+
+    def test_applied_list_version_is_remembered(self):
+        e = Env(deplist="webkit2gtk4.1\ngcc-c++  # comment\n\ngcc-c++\n")
+        rc, out = e.run()
+        with open(f"{e.fake}/state/deps-applied") as fh:
+            self.assertEqual(fh.read().strip(), names_hash(["gcc-c++", "webkit2gtk4.1"]))
+
+    def test_list_version_not_remembered_when_install_fails(self):
+        e = Env(deplist="gcc\n")
+        open(f"{e.fake}/dnf-fails", "w").close()
+        e.run()
+        self.assertFalse(os.path.exists(f"{e.fake}/state/deps-applied"))
 
     def test_http_list_url_is_rejected(self):
         e = Env(deplist="gcc\n")
@@ -284,7 +304,8 @@ class UpdateTests(unittest.TestCase):
 class SourcesScript(unittest.TestCase):
     SCRIPT = os.path.join(HERE, "..", "root", "usr", "libexec", "normie", "normie-sources")
 
-    def make(self, remotes="", installed=(), dnf_fails=False, flatpak_fails=False, have_flatpak=True):
+    def make(self, remotes="", installed=(), dnf_fails=False, flatpak_fails=False, have_flatpak=True,
+             beta_fails=False, conf=""):
         d = tempfile.mkdtemp(prefix="normie-src-")
         atexit.register(shutil.rmtree, d, True)
         os.makedirs(f"{d}/bin")
@@ -294,9 +315,11 @@ class SourcesScript(unittest.TestCase):
             w(f"{d}/bin/flatpak", """#!/bin/sh
 case "$1" in
   remotes) printf '%s' "$REMOTES" ;;
-  remote-add) echo "flatpak $*" >> "$FAKE/calls"; [ -n "$FLATPAK_FAILS" ] && exit 1; exit 0 ;;
+  remote-add) echo "flatpak $*" >> "$FAKE/calls"; [ -n "$FLATPAK_FAILS" ] && exit 1
+              case "$*" in *beta*) [ -n "$BETA_FAILS" ] && exit 1 ;; esac; exit 0 ;;
 esac
 """, 0o755)
+        w(f"{d}/conf", conf)
         w(f"{d}/bin/rpm", """#!/bin/sh
 case "$1" in
   -E) echo 45 ;;
@@ -311,7 +334,7 @@ esac
                 os.symlink(src, f"{d}/bin/{tool}")
         env = dict(os.environ, FAKE=d, NORMIE_TEST="1", NORMIE_STATE=f"{d}/state", REMOTES=remotes,
                    DNF_FAILS="1" if dnf_fails else "", FLATPAK_FAILS="1" if flatpak_fails else "",
-                   PATH=f"{d}/bin")
+                   BETA_FAILS="1" if beta_fails else "", NORMIE_CONF=f"{d}/conf", PATH=f"{d}/bin")
         return d, env
 
     def run_script(self, env, *args):
@@ -341,7 +364,7 @@ esac
         self.assertLess(c.index("rpmfusion-nonfree-release-45.noarch.rpm"), c.index("appstream-data"))
 
     def test_everything_already_present_does_nothing_but_records_success(self):
-        d, env = self.make(remotes="flathub\n", installed=[
+        d, env = self.make(remotes="flathub\nflathub-beta\n", installed=[
             "rpmfusion-free-release", "rpmfusion-nonfree-release", "rpmfusion-free-release-tainted",
             "rpmfusion-nonfree-release-tainted", "rpmfusion-free-appstream-data", "rpmfusion-nonfree-appstream-data"])
         rc, out = self.run_script(env)
@@ -362,12 +385,34 @@ esac
         rc, out = self.run_script(env)
         self.assertEqual(rc, 1)
         self.assertFalse(os.path.exists(f"{d}/state/sources-done"))
-        self.assertEqual(self.calls(d).count("flatpak remote-add"), 6)   # retried six times
+        self.assertEqual(self.calls(d).count("if-not-exists flathub https://dl.flathub.org"), 6)   # retried six times
 
     def test_extras_are_not_attempted_when_rpm_fusion_itself_failed(self):
         d, env = self.make(dnf_fails=True)
         self.run_script(env)
         self.assertNotIn("appstream-data", self.calls(d))
+
+    def test_flathub_beta_is_added_at_lowest_priority_after_flathub(self):
+        d, env = self.make()
+        self.run_script(env)
+        c = self.calls(d)
+        self.assertIn("flatpak remote-add --system --if-not-exists --prio=0 flathub-beta https://flathub.org/beta-repo/flathub-beta.flatpakrepo", c)
+        self.assertLess(c.index("flathub https://dl.flathub.org"), c.index("flathub-beta"))
+
+    def test_flathub_beta_failure_is_not_fatal_and_still_records_success(self):
+        d, env = self.make(beta_fails=True)
+        rc, out = self.run_script(env)
+        self.assertEqual(rc, 0, out)
+        self.assertIn("Could not add Flathub Beta (optional)", out)
+        self.assertTrue(os.path.exists(f"{d}/state/sources-done"))
+
+    def test_flathub_beta_can_be_switched_off(self):
+        for setting in ('FLATHUB_BETA="no"\n', "FLATHUB_BETA=no\n"):
+            d, env = self.make(conf=setting)
+            rc, out = self.run_script(env)
+            self.assertEqual(rc, 0, out)
+            self.assertNotIn("flathub-beta", self.calls(d), setting)
+            self.assertIn("if-not-exists flathub https://dl.flathub.org", self.calls(d))
 
     def test_missing_flatpak_is_skipped_not_fatal(self):
         d, env = self.make(have_flatpak=False)
@@ -379,9 +424,7 @@ esac
         root = os.path.join(HERE, "..", "root")
         links = {
             "etc/systemd/system/multi-user.target.wants/normie-sources.service": "/usr/lib/systemd/system/normie-sources.service",
-            "etc/systemd/system/sockets.target.wants/snapd.socket": "/usr/lib/systemd/system/snapd.socket",
             "etc/systemd/user/timers.target.wants/normie-remind.timer": "/usr/lib/systemd/user/normie-remind.timer",
-            "snap": "/var/lib/snapd/snap",
         }
         for rel, target in links.items():
             p = os.path.join(root, rel)
@@ -393,12 +436,31 @@ esac
         self.assertIn("ConditionPathExists=!/var/lib/normie/sources-done", unit)
 
 
+class NoSnap(unittest.TestCase):
+    """Snap was removed on purpose (docs/DECISIONS.md D-13). These keep it from creeping back in."""
+    ROOT = os.path.join(HERE, "..")
+
+    def test_snap_packages_are_not_in_any_package_list(self):
+        for rel in ("components/normie/tools.xml", "components/normie/deps.xml",
+                    "components/normie/deps-universal.xml", "dist/normie-deps.list"):
+            with open(os.path.join(self.ROOT, rel)) as fh:
+                text = fh.read().lower()
+            self.assertNotIn("snapd", text, rel)
+            self.assertNotIn("discover-snap", text, rel)
+
+    def test_snap_is_not_enabled_by_the_overlay(self):
+        root = os.path.join(self.ROOT, "root")
+        self.assertFalse(os.path.lexists(os.path.join(root, "snap")))
+        self.assertFalse(os.path.lexists(os.path.join(root, "etc/systemd/system/sockets.target.wants/snapd.socket")))
+
+
 class Reminder(unittest.TestCase):
     SCRIPT = os.path.join(HERE, "..", "root", "usr", "libexec", "normie", "normie-remind")
     DAY = 86400
     T0 = 1_800_000_000
 
-    def make(self, last_update_days_ago=None, conf="", notify_answer="", first_seen_days_ago=None, reminded_days_ago=None):
+    def make(self, last_update_days_ago=None, conf="", notify_answer="", first_seen_days_ago=None, reminded_days_ago=None,
+             remote_list=None, applied_hash=None, told_hash=None, offline=False):
         d = tempfile.mkdtemp(prefix="normie-rem-")
         atexit.register(shutil.rmtree, d, True)
         for sub in ("bin", "sys", "user"):
@@ -411,10 +473,25 @@ class Reminder(unittest.TestCase):
             w(f"{d}/user/first-seen", f"{self.T0 - first_seen_days_ago * self.DAY}\n")
         if reminded_days_ago is not None:
             w(f"{d}/user/last-reminded", f"{self.T0 - reminded_days_ago * self.DAY}\n")
+        if remote_list is not None:
+            w(f"{d}/deplist", remote_list)
+        if applied_hash is not None:
+            w(f"{d}/sys/deps-applied", applied_hash + "\n")
+        if told_hash is not None:
+            w(f"{d}/user/deps-notified", told_hash + "\n")
+        w(f"{d}/bin/curl", """#!/bin/sh
+[ -e "$FAKE/offline" ] && exit 6
+out=""; prev=""
+for a in "$@"; do [ "$prev" = "-o" ] && out="$a"; prev="$a"; done
+[ -n "$out" ] && [ -e "$FAKE/deplist" ] && cp "$FAKE/deplist" "$out"
+exit 0
+""", 0o755)
+        if offline:
+            w(f"{d}/offline", "")
         w(f"{d}/bin/notify-send", f'#!/bin/sh\necho "notify $*" >> "$FAKE/calls"\necho "{notify_answer}"\n', 0o755)
         w(f"{d}/gui", '#!/bin/sh\necho "gui started" >> "$FAKE/calls"\n', 0o755)
         env = dict(os.environ, FAKE=d, NORMIE_TEST="1", NORMIE_CONF=f"{d}/conf", NORMIE_STATE=f"{d}/sys",
-                   NORMIE_USER_STATE=f"{d}/user", NORMIE_GUI=f"{d}/gui", NORMIE_NOW=str(self.T0),
+                   NORMIE_USER_STATE=f"{d}/user", NORMIE_GUI=f"{d}/gui", NORMIE_NOW=str(self.T0), NORMIE_LIB=LIB,
                    PATH=f"{d}/bin:" + os.environ["PATH"])
         return d, env
 
@@ -472,6 +549,58 @@ class Reminder(unittest.TestCase):
         d2, env2 = self.make(last_update_days_ago=20, conf='REMIND_DAYS="30"\n')
         self.run_script(env2)
         self.assertEqual(self.calls(d2), "")
+
+    # ---- "compatibility fixes are available"
+    URL_CONF = 'DEPS_LIST_URL="https://example.invalid/normie-deps.list"\n'
+
+    def test_newer_list_triggers_a_fix_notification_even_if_recently_updated(self):
+        d, env = self.make(last_update_days_ago=1, conf=self.URL_CONF, remote_list="gcc\nnewlib-fix\n",
+                           applied_hash=names_hash(["gcc"]))
+        self.run_script(env)
+        c = self.calls(d)
+        self.assertIn("Compatibility fixes are available", c)
+        self.assertIn("--action=update=Update now", c)
+
+    def test_fix_notification_opens_the_window_when_clicked(self):
+        d, env = self.make(conf=self.URL_CONF, remote_list="a\nb\n", applied_hash=names_hash(["a"]), notify_answer="update")
+        self.run_script(env)
+        self.assertIn("gui started", self.calls(d))
+
+    def test_same_list_means_no_fix_notification(self):
+        d, env = self.make(last_update_days_ago=1, conf=self.URL_CONF, remote_list="gcc\nfoo\n",
+                           applied_hash=names_hash(["foo", "gcc"]))
+        self.run_script(env)
+        self.assertEqual(self.calls(d), "")
+
+    def test_each_new_list_version_is_announced_only_once(self):
+        new = ["a", "b"]
+        d, env = self.make(last_update_days_ago=1, conf=self.URL_CONF, remote_list="a\nb\n",
+                           applied_hash=names_hash(["a"]), told_hash=names_hash(new))
+        self.run_script(env)
+        self.assertEqual(self.calls(d), "")
+
+    def test_no_fix_notification_before_a_list_was_ever_applied(self):
+        d, env = self.make(last_update_days_ago=1, conf=self.URL_CONF, remote_list="a\n")   # no applied hash
+        self.run_script(env)
+        self.assertEqual(self.calls(d), "")
+
+    def test_no_url_configured_means_no_network_use(self):
+        d, env = self.make(last_update_days_ago=1, conf="", remote_list="a\n", applied_hash=names_hash(["x"]))
+        self.run_script(env)
+        self.assertEqual(self.calls(d), "")
+
+    def test_offline_is_silent(self):
+        d, env = self.make(last_update_days_ago=1, conf=self.URL_CONF, remote_list="a\n",
+                           applied_hash=names_hash(["x"]), offline=True)
+        r = self.run_script(env)
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual(self.calls(d), "")
+
+    def test_malicious_list_cannot_trigger_anything_but_a_notification(self):
+        d, env = self.make(last_update_days_ago=1, conf=self.URL_CONF,
+                           remote_list="--installroot=/x\nrm -rf /\n$(reboot)\n", applied_hash=names_hash(["x"]))
+        self.run_script(env)
+        self.assertEqual(self.calls(d), "")      # nothing valid in it: ignored, not announced, not run
 
     def test_timer_is_not_active_in_the_live_session(self):
         unit = os.path.join(HERE, "..", "root", "usr", "lib", "systemd", "user", "normie-remind.service")

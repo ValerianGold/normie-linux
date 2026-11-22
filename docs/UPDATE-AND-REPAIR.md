@@ -30,7 +30,7 @@ What "repair" means today, honestly: it re-adds any missing package from the dep
 re-adds the software sources, and rebuilds the NVIDIA driver. It does not yet verify or repair
 damaged system files.
 
-### The app store: Flathub, RPM Fusion and Snap
+### The app store: Flathub, RPM Fusion and experimental apps
 
 KDE's software center (Discover) only shows what its configured sources offer. Fedora KDE ships with
 very little enabled. `normie-sources.service` runs at boot (retrying at each start until it works once;
@@ -39,10 +39,10 @@ the button runs the same script) and sets up:
 | Source | What it adds to Discover | How |
 |---|---|---|
 | Flathub | Chrome, Steam, Discord, VLC and most popular apps (Flatpak) | `flatpak remote-add` |
+| Flathub Beta | Experimental apps, as a separate lower-priority source (optional, `FLATHUB_BETA`) | `flatpak remote-add --prio=0` |
 | RPM Fusion free + nonfree | Codecs, NVIDIA drivers, Steam, extra software (RPM) | RPM Fusion's official release packages |
 | RPM Fusion "tainted" | Software with legal restrictions in some countries (for example DVD playback) | `rpmfusion-*-release-tainted` |
 | RPM Fusion AppStream data | Makes the RPM Fusion packages above actually appear in Discover's search | `rpmfusion-*-appstream-data` |
-| Snap | The Snap Store | `snapd` + `plasma-discover-snap` are in the image; `snapd.socket` is enabled by an overlay symlink, and `/snap` points at `/var/lib/snapd/snap` |
 
 Fedora's GNOME edition shows Chrome in its software center through its optional "third-party
 repositories" setting; KDE has no equivalent turned on, which is why Chrome was missing.
@@ -51,7 +51,10 @@ repositories" setting; KDE has no equivalent turned on, which is why Chrome was 
 
 `normie-remind.timer` (a per-user timer) checks once a day. If Update & Repair has not run for
 `REMIND_DAYS` days (default 14) it shows a notification with an **Update now** button, at most once every
-3 days. A successful full run writes `/var/lib/normie/last-update`. It never changes the system.
+3 days. It also checks whether the project's dependency list has changed since Update & Repair last applied
+it and, if so, announces "Compatibility fixes are available" once per new version. A successful full run
+writes `/var/lib/normie/last-update`; applying the list writes `/var/lib/normie/deps-applied`. The reminder
+never changes the system. How fixes reach users: `ROLLING-OUT-FIXES.md`.
 
 ## "Pull changes from GitHub": how, and what it deliberately does not do
 

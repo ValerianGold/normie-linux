@@ -6,15 +6,42 @@ CONF=/etc/normie/update.conf
 STATE_SYS=/var/lib/normie
 UDIR="${XDG_STATE_HOME:-$HOME/.local/state}/normie"
 GUI=/usr/libexec/normie/normie-update-gui
+LIB=/usr/libexec/normie/normie-lib.sh
 now="$(date +%s)"
 if [ "${NORMIE_TEST:-0}" = 1 ]; then
 	CONF="${NORMIE_CONF:-$CONF}"; STATE_SYS="${NORMIE_STATE:-$STATE_SYS}"; UDIR="${NORMIE_USER_STATE:-$UDIR}"
-	GUI="${NORMIE_GUI:-$GUI}"; now="${NORMIE_NOW:-$now}"
+	GUI="${NORMIE_GUI:-$GUI}"; LIB="${NORMIE_LIB:-$LIB}"; now="${NORMIE_NOW:-$now}"
 fi
 
+mkdir -p "$UDIR" || exit 0
+
+# 1) New compatibility fixes on the project's list? (a tiny download of package NAMES; only if
+#    a list address is configured and Update & Repair has applied a list at least once before)
+url="$(sed -n 's#^DEPS_LIST_URL="\{0,1\}\(https://[^"[:space:]]*\)"\{0,1\}[[:space:]]*$#\1#p' "$CONF" 2>/dev/null | tail -1)"
+if [ -n "$url" ] && [ -r "$STATE_SYS/deps-applied" ] && [ -r "$LIB" ]; then
+	# shellcheck disable=SC1090
+	. "$LIB"
+	tmp="$(mktemp)"
+	if normie_fetch_list "$url" "$tmp"; then
+		new="$(normie_list_hash "$tmp")"
+		applied="$(cat "$STATE_SYS/deps-applied" 2>/dev/null)"
+		told="$(cat "$UDIR/deps-notified" 2>/dev/null)"
+		if [ "$new" != "$applied" ] && [ "$new" != "$told" ]; then       # once per new version of the list
+			echo "$new" > "$UDIR/deps-notified"
+			rm -f "$tmp"
+			action="$(timeout 900 notify-send --app-name="Update & Repair" --icon=system-software-update \
+				--action="update=Update now" "Compatibility fixes are available" \
+				"New fixes that help more apps and games run are ready. One click installs them.")"
+			[ "$action" = update ] && exec "$GUI"
+			exit 0
+		fi
+	fi
+	rm -f "$tmp"
+fi
+
+# 2) Has it simply been a while?
 days="$(sed -n 's/^REMIND_DAYS="\{0,1\}\([0-9]\{1,4\}\)"\{0,1\}[[:space:]]*$/\1/p' "$CONF" 2>/dev/null | tail -1)"
 days="${days:-14}"
-mkdir -p "$UDIR" || exit 0
 
 last="$(cat "$STATE_SYS/last-update" 2>/dev/null)"
 if ! [[ "$last" =~ ^[0-9]+$ ]]; then          # never updated through the button: count from first sight
