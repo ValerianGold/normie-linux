@@ -48,7 +48,7 @@ Fedora 45 to 46 upgrades should be a separate, confirmed step.
 Real-hardware test: H.265 video played but without sound. Cause: only the 32-bit full-codec plugins were
 listed, so 64-bit apps used Fedora's limited libraries (video was probably decoded by the NVIDIA GPU).
 Decision: add RPM Fusion's `libavcodec-freeworld` (plus `gstreamer1-plugins-bad-freeworld`,
-`gstreamer1-plugins-ugly`, `gstreamer1-libav`) for 64-bit. It ADDS codecs to Fedora's libraries instead of
+`gstreamer1-plugins-ugly`, `gstreamer1-plugin-libav`) for 64-bit. It ADDS codecs to Fedora's libraries instead of
 replacing them, so no `ffmpeg` swap and no conflict. Still to verify: that H.265 audio now works.
 Still open: hardware video decode on AMD and Intel needs `mesa-va-drivers-freeworld` swapped in for BOTH
 architectures (a replacement, so it cannot go in the image list); a candidate for the button. The list
@@ -60,28 +60,33 @@ also still has `mesa-va-drivers-freeworld.i686` alone; `solve-check.py` reports 
 - Redistribution of NVIDIA and other RPM Fusion nonfree packages must be checked before publishing.
 - Fedora branding must be removed first (M6).
 
-## D-9 Google Chrome: PARTLY DECIDED
-Chrome is not in Fedora's repositories and Discover did not list it in the first VM test. Fix in place:
-Flathub is now enabled automatically, which gives Discover a full catalog including Chrome (Flatpak).
-Open: Xodus Nexus needs Chrome for passkey sign-in and may expect the normal (RPM) Chrome rather than the
-Flatpak one. TEST both with Nexus's sign-in before choosing which one to recommend. Downloading Google's
-`.rpm` and double-clicking it already works (it opens the software center and also adds Google's repository
-so Chrome then updates with everything else). KDE draws `.rpm` files with an archive-style icon because it
-treats them as archives, which is cosmetic.
-We do not bundle Chrome in the ISO (redistribution terms are Google's to grant).
+## D-9 Google Chrome: DECIDED
+Fedora already ships the supported way to get Chrome, Steam and NVIDIA repositories: `fedora-third-party`
+(GNOME asks about it at first login; KDE never does). `fedora-third-party enable` turns on the Google Chrome,
+RPM Fusion Steam and NVIDIA repositories and adds Flathub, and the `fedora-appstream-metadata` package
+(already in the image) is what makes them show up in a software center. `normie-sources` now runs it, once,
+only when nobody has chosen yet, so a user who turned it off stays off. This gives the normal RPM Chrome,
+which is also what Xodus Nexus's sign-in expects. Our own Flathub step runs first, so our Flathub remote is
+unfiltered and not under Fedora's control (Fedora ships a filter hook it could narrow later).
+RPM Fusion's Steam and NVIDIA repositories are shipped disabled by RPM Fusion, which is why they had to be
+enabled by hand in Discover before. We do not bundle Chrome in the ISO.
 
-## D-12 Where the Update & Repair button lives: PARTLY BUILT
+## D-12 Where the Update & Repair button lives: DECIDED (pin deferred to our own look-and-feel)
 Requested: a button in the Start menu next to Sleep / Restart / Shut Down. Plasma draws that row itself and
-offers no way to add entries; adding one means modifying the menu's own QML, which Plasma updates would
-overwrite on machines we update automatically. Agreed alternative: pin it at the top of the Start menu
-(favorites) plus a periodic reminder.
-- Reminder: BUILT (`normie-remind`), now also announces "Compatibility fixes are available".
-- Pin: NOT built. Not because pinning is dangerous in itself. A fresh install does have default favorites;
-  the problem is that they are not necessarily stored in the user's config yet, so a script that "adds one"
-  to an empty stored list could REPLACE the defaults (Firefox, Files, ...) instead of extending them, and
-  the config format differs between Plasma versions. It waits for one read-only look at how this Plasma
-  version stores them (`grep -rn favorites ~/.config/plasma-org.kde.plasma.desktop-appletsrc` on an
-  installed system).
+offers no way to add entries; changing it means modifying the menu's own QML, which Plasma updates would
+overwrite. Agreed alternative: pin it in the Start menu's favorites, plus a reminder.
+- Reminder: BUILT (`normie-remind`; also announces "Compatibility fixes are available").
+- Pin: researched on the maintainer's system (Plasma 6.8.3). Favorites are NOT in the Plasma config file
+  (`favoritesPortedToKAstats=true` is the only trace). They live in the activity manager's database, with their
+  order in `~/.config/kactivitymanagerdrc`-style stats files, reached through the D-Bus interface
+  `org.kde.ActivityManager.ResourcesLinking`. The stored form of an entry changed between Plasma versions
+  (bare `app.desktop` names versus `applications:app.desktop`), a bug report against 6.8.1 shows Kickoff
+  re-adding defaults after removal, and other projects need to edit the database before Plasma starts. A script
+  poking that at runtime would be version-specific and could silently do nothing.
+  Decision: do NOT hack it in at runtime. The correct, upgrade-safe place is the distribution's own default
+  Plasma layout, which ships in a look-and-feel package. We have to replace Fedora's `plasma-lookandfeel-fedora`
+  anyway for the rebrand (M6), so the pin is added there. Until then the app is in the menu under System, and
+  the reminder keeps it from being forgotten.
 
 ## D-13 Snap: REMOVED
 Snap was added on request, then removed by the maintainer: it adds little (nearly everything is on Flathub),

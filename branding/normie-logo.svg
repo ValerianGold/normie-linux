@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Normie Linux logo: a white letter N with a flame on top">
+  <title>Normie Linux</title>
+  <defs>
+    <linearGradient id="badge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1c2236"/>
+      <stop offset="1" stop-color="#0b0e18"/>
+    </linearGradient>
+    <linearGradient id="fire" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#ff4d12"/>
+      <stop offset="1" stop-color="#ffb52e"/>
+    </linearGradient>
+  </defs>
+
+  <!-- dark rounded badge: keeps the white N visible on light and dark backgrounds -->
+  <rect width="512" height="512" rx="112" fill="url(#badge)"/>
+
+  <!-- the letter N, built from three plain shapes (no font needed) -->
+  <g fill="#ffffff">
+    <rect x="136" y="216" width="52" height="230"/>
+    <rect x="324" y="216" width="52" height="230"/>
+    <polygon points="136,216 200,216 376,446 312,446"/>
+  </g>
+
+  <!-- one flame on the right stem: outer, middle and core layers (the inner layers are scaled copies) -->
+  <path fill="url(#fire)" d="M350 232C312 232 296 198 308 168C314 154 326 144 322 122C338 134 342 146 344 158C346 126 340 98 356 66C384 100 398 138 394 178C391 212 374 232 350 232Z"/>
+  <path fill="#ffd23f" d="M350 231C326 231 315 209 323 190C327 181 335 175 332 161C342 168 345 176 346 184C347 163 344 145 354 125C372 147 381 171 378 196C376 218 365 231 350 231Z"/>
+  <path fill="#fff1b8" d="M350 231C337 231 332 219 336 209C338 204 342 201 340 194C346 198 347 202 348 206C349 195 347 185 352 175C362 186 366 199 365 213C364 224 358 231 350 231Z"/>
+</svg>

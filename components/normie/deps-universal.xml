@@ -176,7 +176,7 @@
 		<package name="libavcodec-freeworld"/>
 		<package name="gstreamer1-plugins-bad-freeworld"/>
 		<package name="gstreamer1-plugins-ugly"/>
-		<package name="gstreamer1-libav"/>
+		<package name="gstreamer1-plugin-libav"/>
 		<package name="mediainfo"/>
 	</packages>
 

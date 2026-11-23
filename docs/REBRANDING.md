@@ -34,15 +34,43 @@ screen, networking and the rest.
 | Our workload | Higher: we copy and maintain the presets and macros each release (Fedora's are MIT-licensed) | Lower |
 | Recommended | **Yes, unless Fedora's legal list says B is fine** | Only with written confirmation |
 
-## Packages that will probably need replacing (to be confirmed by the inventory)
+## Inventory results (R0 is done)
 
-`fedora-release-kde`, `fedora-release-common`, `fedora-release-identity-kde`, `fedora-logos`,
-`fedora-backgrounds-kde`, `plasma-welcome-fedora`, Fedora-branded settings and installer branding.
-The real list comes from the inventory below, not from guessing.
+From an installed Normie system (Fedora 45 KDE base, Plasma 6.8.3). Sorting is my judgment of Fedora's
+rules; the open questions go to Fedora's legal list (stage R4).
+
+**Must replace** (Fedora's own rule names `fedora-logos`, `fedora-release` and `fedora-release-notes`; the
+`fedora-release` family is the same family):
+
+| Package | What it carries |
+|---|---|
+| `fedora-release-kde-desktop`, `fedora-release-identity-kde-desktop`, `fedora-release-common` | The identity (`/etc/os-release`: `NAME="Fedora Linux"`, `ID=fedora`, `LOGO=fedora-logo-icon`, `REDHAT_BUGZILLA_*`), version macros, service presets. The image names `fedora-release-kde` (`teams/kde.xml`) |
+| `fedora-logos` | Fedora's logos and boot-splash artwork |
+
+**Should replace** (branded artwork, texts or defaults, not named in the rule but plainly Fedora's):
+
+| Package | Why |
+|---|---|
+| `f45-backgrounds-base`, `f45-backgrounds-kde`, `desktop-backgrounds-kde` | Fedora's wallpapers |
+| `plasma-lookandfeel-fedora` | Default Plasma layout and look. **Our own version is where the Start menu pin goes** (D-12) |
+| `plasma-welcome-fedora` | The welcome app's Fedora text and pages |
+| `breeze-icon-theme-fedora` | Icon theme variant carrying Fedora's logo |
+| `fedora-bookmarks` | Firefox bookmarks and start page |
+| `libreport-fedora` | Sends users' crash reports to Red Hat's Bugzilla; must point at our own tracker instead |
+
+**Keep** (they name Fedora because they ARE Fedora's repositories, keys and tools; this is the "based on
+Fedora" reference, not our branding): `fedora-repos`, `fedora-gpg-keys`, `fedora-third-party`,
+`fedora-flathub-remote`, `fedora-workstation-repositories`, `fedora-appstream-metadata`,
+`NetworkManager-config-connectivity-fedora` (consider our own check address later), `lsb_release`, and the
+`rpmfusion-*` packages. Matches for "generic" such as `mingw-binutils-generic` are unrelated.
+
+`/etc/os-release` after the rebrand: new `NAME`, `PRETTY_NAME`, `ID=normie`, `LOGO`, `HOME_URL` and support
+URLs, `DEFAULT_HOSTNAME`; remove `REDHAT_BUGZILLA_*`; keep `ID_LIKE=fedora`, `VERSION_ID=45` and
+`SUPPORT_END`. Risk to test: some Fedora tools may check `ID=fedora` exactly rather than `ID_LIKE`.
 
 ## Stages
 
-1. **R0, inventory.** Run the two commands below on an installed Normie system and keep the output.
+1. **R0, inventory.** Done (above).
 2. **R1, our own package repository** (also solves lane 3 in `ROLLING-OUT-FIXES.md`). Copr is the easiest start.
 3. **R2, build** `normie-release`, `normie-logos`, `normie-release-notes` (and `normie-tools` for our scripts).
    Test in a VM: boots, logs in, `dnf upgrade` works, RPM Fusion installs, `rpm -E %fedora` still prints 45.
@@ -52,15 +80,8 @@ The real list comes from the inventory below, not from guessing.
 5. **R4, ask Fedora's legal list to review** the audit result before publishing.
 6. **R5, publish** the ISO.
 
-## R0 inventory: run these on an installed Normie system and send the output
-
-```
-cat /etc/os-release
-rpm -qa | grep -iE 'fedora|logos|backgrounds|generic|plasma-welcome|release' | sort
-```
-
 ## What is already done
 
 `NOTICE.md` states that Normie Linux is not affiliated with Fedora and that Fedora's branding must be
 replaced before any ISO is published. `Normie-Linux.kiwi` already uses the name Normie-Linux for the image
-and the ISO label.
+and the ISO label. A draft logo is in `branding/` (`normie-logo.svg`).

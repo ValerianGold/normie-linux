@@ -305,7 +305,7 @@ class SourcesScript(unittest.TestCase):
     SCRIPT = os.path.join(HERE, "..", "root", "usr", "libexec", "normie", "normie-sources")
 
     def make(self, remotes="", installed=(), dnf_fails=False, flatpak_fails=False, have_flatpak=True,
-             beta_fails=False, conf=""):
+             beta_fails=False, conf="", third_party=None, third_party_fails=False):
         d = tempfile.mkdtemp(prefix="normie-src-")
         atexit.register(shutil.rmtree, d, True)
         os.makedirs(f"{d}/bin")
@@ -320,6 +320,14 @@ case "$1" in
 esac
 """, 0o755)
         w(f"{d}/conf", conf)
+        if third_party is not None:       # None = tool not installed; otherwise the text `query` prints
+            w(f"{d}/tp-state", third_party + "\n")
+            w(f"{d}/bin/fedora-third-party", """#!/bin/sh
+case "$1" in
+  query) cat "$FAKE/tp-state" ;;
+  enable) echo "fedora-third-party enable" >> "$FAKE/calls"; [ -n "$TP_FAILS" ] && exit 1; exit 0 ;;
+esac
+""", 0o755)
         w(f"{d}/bin/rpm", """#!/bin/sh
 case "$1" in
   -E) echo 45 ;;
@@ -334,7 +342,8 @@ esac
                 os.symlink(src, f"{d}/bin/{tool}")
         env = dict(os.environ, FAKE=d, NORMIE_TEST="1", NORMIE_STATE=f"{d}/state", REMOTES=remotes,
                    DNF_FAILS="1" if dnf_fails else "", FLATPAK_FAILS="1" if flatpak_fails else "",
-                   BETA_FAILS="1" if beta_fails else "", NORMIE_CONF=f"{d}/conf", PATH=f"{d}/bin")
+                   BETA_FAILS="1" if beta_fails else "", TP_FAILS="1" if third_party_fails else "",
+                   NORMIE_CONF=f"{d}/conf", PATH=f"{d}/bin")
         return d, env
 
     def run_script(self, env, *args):
@@ -413,6 +422,42 @@ esac
             self.assertEqual(rc, 0, out)
             self.assertNotIn("flathub-beta", self.calls(d), setting)
             self.assertIn("if-not-exists flathub https://dl.flathub.org", self.calls(d))
+
+    NO_CHOICE = "Third-party repositories are disabled (no selection has been made)"
+
+    def test_third_party_is_enabled_when_nobody_has_chosen(self):
+        d, env = self.make(third_party=self.NO_CHOICE)
+        rc, out = self.run_script(env)
+        self.assertEqual(rc, 0, out)
+        self.assertIn("fedora-third-party enable", self.calls(d))
+
+    def test_third_party_runs_after_our_own_flathub_so_ours_stays_unfiltered(self):
+        d, env = self.make(third_party=self.NO_CHOICE)
+        self.run_script(env)
+        c = self.calls(d)
+        self.assertLess(c.index("if-not-exists flathub https://dl.flathub.org"), c.index("fedora-third-party enable"))
+
+    def test_third_party_already_enabled_is_left_alone(self):
+        d, env = self.make(third_party="Third-party repositories are enabled.")
+        self.run_script(env)
+        self.assertNotIn("fedora-third-party enable", self.calls(d))
+
+    def test_third_party_explicitly_disabled_by_the_user_is_respected(self):
+        d, env = self.make(third_party="Third-party repositories are disabled.")
+        rc, out = self.run_script(env)
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn("fedora-third-party enable", self.calls(d))
+
+    def test_third_party_tool_missing_is_not_an_error(self):
+        d, env = self.make(third_party=None)
+        rc, out = self.run_script(env)
+        self.assertEqual(rc, 0, out)
+
+    def test_third_party_failure_retries_next_boot(self):
+        d, env = self.make(third_party=self.NO_CHOICE, third_party_fails=True)
+        rc, out = self.run_script(env)
+        self.assertEqual(rc, 1)
+        self.assertFalse(os.path.exists(f"{d}/state/sources-done"))
 
     def test_missing_flatpak_is_skipped_not_fatal(self):
         d, env = self.make(have_flatpak=False)

@@ -40,6 +40,7 @@ the button runs the same script) and sets up:
 |---|---|---|
 | Flathub | Chrome, Steam, Discord, VLC and most popular apps (Flatpak) | `flatpak remote-add` |
 | Flathub Beta | Experimental apps, as a separate lower-priority source (optional, `FLATHUB_BETA`) | `flatpak remote-add --prio=0` |
+| Fedora third-party repositories | Google Chrome, plus RPM Fusion's Steam and NVIDIA repositories (disabled by default upstream) | `fedora-third-party enable`, only if nobody has chosen yet; Fedora's `fedora-appstream-metadata` lists the apps |
 | RPM Fusion free + nonfree | Codecs, NVIDIA drivers, Steam, extra software (RPM) | RPM Fusion's official release packages |
 | RPM Fusion "tainted" | Software with legal restrictions in some countries (for example DVD playback) | `rpmfusion-*-release-tainted` |
 | RPM Fusion AppStream data | Makes the RPM Fusion packages above actually appear in Discover's search | `rpmfusion-*-appstream-data` |

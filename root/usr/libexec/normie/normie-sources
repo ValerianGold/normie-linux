@@ -4,6 +4,8 @@
 #   - Flathub (Flatpak apps: Chrome, Steam, Discord, VLC, ...)
 #   - Flathub Beta (experimental apps, a separate clearly labeled source; lowest priority so
 #     the stable version of an app is always preferred; switch off with FLATHUB_BETA="no")
+#   - Fedora's own "third-party repositories" switch (Google Chrome, Steam and NVIDIA repositories),
+#     turned on only if nobody has chosen yet (an explicit "off" by the user is respected)
 #   - RPM Fusion free + nonfree (codecs, NVIDIA drivers, Steam, extra software) with the
 #     "tainted" repositories and the AppStream data that makes them show up in Discover
 # Runs at boot from normie-sources.service until everything succeeds once, and from the
@@ -43,6 +45,16 @@ if command -v flatpak >/dev/null 2>&1; then
 	fi
 else
 	echo "flatpak is not installed; skipping Flathub"
+fi
+
+# --- Fedora's third-party repositories (Google Chrome, RPM Fusion Steam and NVIDIA repositories).
+# GNOME asks about this at first login; KDE never does, so Chrome never shows up in Discover.
+# Run AFTER our own Flathub step above: a Flathub remote that already exists is left alone (and unfiltered).
+# Only act when no choice has been made: if the user turned it off, it stays off.
+if command -v fedora-third-party >/dev/null 2>&1; then
+	if fedora-third-party query 2>&1 | grep -qi 'no selection'; then
+		retry run fedora-third-party enable || { echo "Could not enable Fedora's third-party repositories"; ok=0; }
+	fi
 fi
 
 # --- RPM Fusion release packages (official URLs, per RPM Fusion's own instructions)
