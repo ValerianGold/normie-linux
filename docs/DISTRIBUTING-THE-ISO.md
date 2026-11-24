@@ -47,6 +47,26 @@ copy of the ISO and its checksum yourself. Many people use two places so one goi
   in a public ISO. Not legal advice: the legal list is the place to ask.
 - A **fresh VM install** works from the very ISO you upload, not just a previous build.
 
+## Step by step (when the checks above are done)
+
+1. **Build and check.** `tools/update-iso.sh ...`, then `cd ~/normie-linux && python3 tools/audit-branding.py`
+   (no `FAIL`, every remaining `REVIEW` line read), then install the ISO in a VM and boot the installed system.
+2. **Collect the files** from `~/normie-linux-out/Normie-Full-Live-build/`: the `.iso`, its `.sha256`, and
+   `BUILD-INFO.txt`. Make the package list from a booted copy: `rpm -qa | sort > Normie-Linux-45-alpha-packages.txt`.
+3. **Check the download** matches: `sha256sum -c <iso>.sha256`. Then boot that very file once more.
+4. **GitHub (source):** push, make the `v0.1.0-alpha` release without the ISO (`PUBLISHING.md`).
+5. **SourceForge (the ISO):** create a free account, then a project (Project Admin, unix name e.g. `normie-linux`).
+   Upload with rsync, which can resume a broken transfer (SourceForge recommends it above 100 MB):
+   `rsync -avP -e ssh <iso> <iso>.sha256 BUILD-INFO.txt USERNAME,PROJECTNAME@frs.sourceforge.net:/home/frs/project/P/PR/PROJECTNAME/0.1.0-alpha/`
+   where `P` is the project name's first letter and `PR` its first two (the exact line for your project is on
+   SourceForge's rsync page). In the project's Files tab set the ISO as the default download and add a `README`
+   in the folder with the checksum and the alpha warning.
+6. **Internet Archive (second copy):** make a free account, use the Upload button, give the item a title, a URL name such as
+   `normie-linux-0.1.0-alpha`, a description that begins with the alpha warning, and the same files. File names must be plain
+   ASCII (no accents or spaces). The Archive makes a torrent for most items; the item page shows whether it did.
+7. **Link both** from the GitHub release notes and the README, with the SHA-256 next to the links.
+8. Do one download from each place, check the checksum, and boot it.
+
 ## Rough size and cost
 
 A full ISO is a few GB. One thousand downloads is a few TB of traffic: free on SourceForge or the Internet Archive,

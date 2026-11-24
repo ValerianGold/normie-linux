@@ -14,10 +14,13 @@ It prints three kinds of line:
   REVIEW  a file or text that mentions Fedora in a branding place. Often fine (a credit, a link to Fedora's
           repositories), but look at each one. They are the list to take to Fedora's legal list (docs/REBRANDING.md R4).
   ok      checked and clean.
+  note    Fedora mentions that are expected and cannot be removed (names other software looks for, such as
+          D-Bus and AppStream identifiers, the installer's profiles for other distributions). Counted, not listed.
 
 Fedora's repositories, keys and tools (fedora-repos, fedora-gpg-keys, fedora-third-party, ...) keep their
 names on purpose: they ARE Fedora's. They are never reported.
 """
+import configparser
 import os
 import re
 import subprocess
@@ -41,6 +44,19 @@ PLACES = ["usr/share/icons", "usr/share/pixmaps", "usr/share/plasma", "usr/share
 # File names that must keep the word (they are identifiers owned by other software)
 NAME_OK = ("org.fedoraproject.AnacondaInstaller",)
 MAX_TEXT = 1_000_000
+# Fedora mentions that are expected: identifiers other software looks for, and files nobody sees.
+# (pattern on the path relative to the image root, what to call the group). Anything else is listed.
+EXPECTED = (
+    (re.compile(r"^usr/share/anaconda/dbus/"), "installer D-Bus names (org.fedoraproject.Anaconda...)"),
+    (re.compile(r"^usr/share/metainfo/org\.fedoraproject\.(?!MediaWriter|fedora\.metainfo)"),
+     "AppStream identifiers of fonts and language packs (org.fedoraproject.*)"),
+    (re.compile(r"^etc/anaconda/profile\.d/(?!normie)"), "installer profiles for other products and distributions"),
+    (re.compile(r"^usr/share/anaconda/gnome/"), "the installer's GNOME welcome screen (not used with KDE)"),
+    (re.compile(r"^boot/config-"), "kernel build settings"),
+    (re.compile(r"^usr/lib/os-release$"), "ID_LIKE=fedora, on purpose"),
+    (re.compile(r"^usr/share/metainfo/(?!org\.fedoraproject\.(MediaWriter|fedora\.metainfo))[^/]*\.(appdata|metainfo)\.xml$"),
+     "AppStream metadata of other packages (credits, links)"),
+)
 
 
 class Report:
@@ -57,6 +73,12 @@ class Report:
 
     def ok(self, msg):
         self.lines.append(f"ok      {msg}")
+
+    def note(self, msg):
+        self.lines.append(f"note    {msg}")
+
+    def detail(self, msg):
+        self.lines.append(f"          > {msg}")
 
     def show(self):
         print("\n".join(self.lines))
@@ -144,13 +166,35 @@ def walk_places(root):
                     yield os.path.join(d, f)
 
 
+def expected_group(rel):
+    for pattern, why in EXPECTED:
+        if pattern.search(rel):
+            return why
+    return None
+
+
+def matching_lines(data, limit=2):
+    out = []
+    for line in data.decode("utf-8", "replace").splitlines():
+        if re.search("fedora", line, re.I):
+            line = line.strip()
+            out.append(line if len(line) <= 110 else line[:107] + "...")
+            if len(out) == limit:
+                break
+    return out
+
+
 def audit_files(root, rep):
-    named, texts = [], {}
+    named, texts, lines, expected = [], {}, {}, {}
     for path in walk_places(root):
         rel = os.path.relpath(path, root)
         base = os.path.basename(path)
+        group = expected_group(rel)
         if "fedora" in base.lower() and not base.startswith(NAME_OK):
-            named.append(rel)
+            if group:
+                expected[group] = expected.get(group, 0) + 1
+            else:
+                named.append(rel)
         if os.path.islink(path) or rel.endswith((".po", ".mo")):
             continue
         try:
@@ -164,15 +208,59 @@ def audit_files(root, rep):
             continue
         hits = len(re.findall(rb"fedora", data, re.I))
         if hits:
-            texts[rel] = hits
+            if group:
+                expected[group] = expected.get(group, 0) + 1
+            else:
+                texts[rel] = hits
+                lines[rel] = matching_lines(data)
     for rel in sorted(named):
         rep.review(f"file named for Fedora: /{rel}")
     for rel, n in sorted(texts.items())[:80]:
         rep.review(f"mentions Fedora ({n}x): /{rel}")
+        for line in lines[rel]:
+            rep.detail(line)
     if len(texts) > 80:
         rep.review(f"... and {len(texts) - 80} more files that mention Fedora")
-    if not named and not texts:
+    for why, n in sorted(expected.items(), key=lambda kv: -kv[1]):
+        rep.note(f"{n} files: {why}")
+    if not named and not texts and not expected:
         rep.ok("no file in the branding places is named for, or mentions, Fedora")
+
+
+def audit_installer_profile(root, rep):
+    """The installer must have a profile matching ID=normie, or it falls back to generic defaults."""
+    pdir = os.path.join(root, "etc/anaconda/profile.d")
+    if not os.path.isdir(pdir):
+        rep.review("no /etc/anaconda/profile.d in the image, so the installer profile was not checked")
+        return
+    profiles = {}
+    for f in sorted(os.listdir(pdir)):
+        if not f.endswith(".conf"):
+            continue
+        cp = configparser.ConfigParser(interpolation=None, strict=False)
+        try:
+            cp.read(os.path.join(pdir, f))
+        except configparser.Error:
+            continue
+        pid = cp.get("Profile", "profile_id", fallback=f[:-5])
+        profiles[pid] = cp
+    ours = [pid for pid, cp in profiles.items() if cp.get("Profile Detection", "os_id", fallback="") == "normie"]
+    if not ours:
+        rep.fail("no installer profile matches ID=normie, so the installer would use generic defaults "
+                 "(see the 'installer profile' block in config.sh)")
+        return
+    pid, efi = ours[0], None
+    seen = set()
+    while pid and pid not in seen and pid in profiles:       # follow base_profile to find the boot-loader folder
+        seen.add(pid)
+        efi = profiles[pid].get("Bootloader", "efi_dir", fallback=None) or efi
+        if efi:
+            break
+        pid = profiles[pid].get("Profile", "base_profile", fallback=None)
+    if efi:
+        rep.ok(f"installer profile {ours[0]} matches ID=normie (boot-loader folder EFI/{efi})")
+    else:
+        rep.review(f"installer profile {ours[0]} matches ID=normie but no boot-loader folder (efi_dir) was found in it or its base")
 
 
 def audit_look_and_feel(root, rep):
@@ -282,6 +370,7 @@ def main(argv):
         audit_os_release(root, rep)
         audit_packages(root, rep)
         audit_look_and_feel(root, rep)
+        audit_installer_profile(root, rep)
         audit_files(root, rep)
     else:
         rep.review("the unpacked image folder was not found, so only the ISO labels were checked (use --root DIR)")

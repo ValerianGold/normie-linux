@@ -53,6 +53,33 @@ if [[ "$kiwi_profiles" == *"Normie"* ]]; then
 fi
 
 #======================================
+# NORMIE-LINUX CHANGE: installer profile
+#--------------------------------------
+## Anaconda (the installer) chooses its settings by matching ID and VARIANT_ID from /etc/os-release against
+## the profiles in /etc/anaconda/profile.d. Ours says ID=normie, which none of Fedora's profiles match, so
+## the installer would fall back to generic defaults (among them the boot-loader folder on the EFI partition,
+## which must stay "fedora" because the shim and GRUB packages we keep install there). Make a Normie copy of
+## Fedora's KDE profile: the same settings, matched by our ID. Done while building, so it follows Fedora's
+## updates. NORMIE_PROFILE_DIR exists only so the test suite can run this on a scratch folder.
+if [[ "$kiwi_profiles" == *"Normie"* ]]; then
+	NORMIE_PDIR="${NORMIE_PROFILE_DIR:-/etc/anaconda/profile.d}"
+	if [ -r "$NORMIE_PDIR/fedora-kde.conf" ]; then
+		sed -E -e 's/^(profile_id[[:space:]]*=[[:space:]]*)fedora-kde[[:space:]]*$/\1normie-kde/' \
+		       -e 's/^(os_id[[:space:]]*=[[:space:]]*)fedora[[:space:]]*$/\1normie/' \
+		       "$NORMIE_PDIR/fedora-kde.conf" > "$NORMIE_PDIR/normie-kde.conf"
+		if grep -qE '^profile_id[[:space:]]*=[[:space:]]*normie-kde' "$NORMIE_PDIR/normie-kde.conf" \
+		   && grep -qE '^os_id[[:space:]]*=[[:space:]]*normie' "$NORMIE_PDIR/normie-kde.conf"; then
+			echo "Normie: installer profile $NORMIE_PDIR/normie-kde.conf made from fedora-kde.conf"
+		else
+			rm -f "$NORMIE_PDIR/normie-kde.conf"
+			echo "Normie: WARNING fedora-kde.conf has no profile_id/os_id lines in the expected form; no Normie installer profile made"
+		fi
+	else
+		echo "Normie: WARNING no $NORMIE_PDIR/fedora-kde.conf to copy; no Normie installer profile made"
+	fi
+fi
+
+#======================================
 # Set SELinux booleans
 #--------------------------------------
 if [[ "$kiwi_profiles" != *"Container"* ]] && [[ "$kiwi_profiles" != *"FEX"* ]] && [[ "$kiwi_profiles" != *"WSL"* ]]; then

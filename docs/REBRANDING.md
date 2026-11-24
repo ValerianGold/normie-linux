@@ -40,10 +40,22 @@ report to Red Hat's Bugzilla only if the user chooses to report one. To remove t
 `abrt-desktop`, or rebuild the affected Fedora packages in our own repository (M3). Both are listed for review by
 `tools/audit-branding.py`.
 
+## Reading the audit
+
+A built image mentions "Fedora" in hundreds of files. Almost all of them are names that other software looks
+for and that we must not change: the installer's D-Bus names (`org.fedoraproject.Anaconda...`), AppStream
+identifiers of fonts and language packs, the installer's profiles for other products, the kernel's build
+settings and `ID_LIKE=fedora`. `tools/audit-branding.py` counts those on `note` lines and does not list them.
+Every `REVIEW` line that remains is a file a person could actually see, and the audit prints the lines that
+mention Fedora under it. Those are the ones to fix or take to Fedora's legal list.
+
 ## Known gaps to check on the first built ISO
 
-- The installer (Anaconda) picks its product settings by the system's `ID`. Ours is `normie`, so it may use
-  its defaults instead of Fedora KDE's (for example the disk layout). The audit lists `/etc/anaconda/product.d`.
+- The installer (Anaconda) picks its settings by the system's `ID` and `VARIANT_ID`. Ours is `normie`, which no
+  Fedora profile matches, so `config.sh` makes `/etc/anaconda/profile.d/normie-kde.conf` as a copy of Fedora's
+  `fedora-kde.conf` while building (same settings, matched by our ID). The audit checks that it exists and shows the
+  boot-loader folder (`EFI/fedora`, which must stay: the shim and GRUB packages we keep install there).
+  Confirm in a VM that an installed system boots, and look at its boot-menu entry name.
 - Whether the KDE settings or any other package still hard-requires something we excluded
   (`tools/solve-check.py` reports that before the long build).
 - Whether `fedora-third-party` works when `ID` is not `fedora` (Update & Repair falls back to adding Flathub itself).

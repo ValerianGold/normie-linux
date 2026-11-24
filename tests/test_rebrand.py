@@ -221,6 +221,41 @@ class ConfigScript(unittest.TestCase):
         self.assertIn('if [[ "$kiwi_profiles" == *"Normie"* ]]', block)
 
 
+class InstallerProfileBlock(unittest.TestCase):
+    """The 'installer profile' block of config.sh, run on a scratch folder."""
+
+    def run_block(self, pdir, profiles="Normie-Full-Live"):
+        block = read("config.sh").split("NORMIE-LINUX CHANGE: installer profile")[1].split("Set SELinux booleans")[0]
+        block = block.split("\n", 1)[1]                      # drop the rest of the comment header line
+        script = "kiwi_profiles=%s\n%s" % (profiles, "\n".join(l for l in block.splitlines() if not l.startswith("#")))
+        r = subprocess.run(["bash", "-c", script], env=dict(os.environ, NORMIE_PROFILE_DIR=pdir), capture_output=True, text=True)
+        return r.returncode, r.stdout + r.stderr
+
+    def test_it_makes_a_normie_copy_of_the_kde_profile(self):
+        d = tmpdir()
+        write(d + "/fedora-kde.conf", FEDORA_KDE_PROFILE)
+        rc, out = self.run_block(d)
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(read_file(d + "/normie-kde.conf"), NORMIE_PROFILE)
+        self.assertEqual(read_file(d + "/fedora-kde.conf"), FEDORA_KDE_PROFILE)     # Fedora's own is untouched
+
+    def test_it_makes_nothing_for_a_profile_it_does_not_understand(self):
+        d = tmpdir()
+        write(d + "/fedora-kde.conf", "[Profile]\nname: odd\n")
+        rc, out = self.run_block(d)
+        self.assertEqual(rc, 0, out)
+        self.assertIn("WARNING", out)
+        self.assertFalse(os.path.exists(d + "/normie-kde.conf"))
+
+    def test_it_warns_when_fedoras_profile_is_missing_and_skips_non_normie_profiles(self):
+        d = tmpdir()
+        rc, out = self.run_block(d)
+        self.assertIn("WARNING", out)
+        write(d + "/fedora-kde.conf", FEDORA_KDE_PROFILE)
+        rc, out = self.run_block(d, profiles="Container")
+        self.assertFalse(os.path.exists(d + "/normie-kde.conf"))
+
+
 class BuildRpmsScript(unittest.TestCase):
     """tools/build-rpms.sh with fake rpmbuild and createrepo_c."""
     FAKE_RPMBUILD = r'''#!/bin/bash
@@ -377,7 +412,24 @@ def make_iso(path, volume="Normie-Linux-Full-Live-45", publisher="Normie Linux c
         fh.write(b"\0" * 32768 + bytes(pvd))
 
 
-def make_image(root, name="Normie Linux", ident="normie", extra=None):
+FEDORA_KDE_PROFILE = """[Profile]
+profile_id = fedora-kde
+base_profile = fedora
+
+[Profile Detection]
+os_id = fedora
+variant_id = kde
+
+[Bootloader]
+efi_dir = fedora
+"""
+NORMIE_PROFILE = FEDORA_KDE_PROFILE.replace("fedora-kde", "normie-kde").replace("os_id = fedora", "os_id = normie")
+
+
+def make_image(root, name="Normie Linux", ident="normie", extra=None, profile=True):
+    if profile:
+        write(f"{root}/etc/anaconda/profile.d/fedora-kde.conf", FEDORA_KDE_PROFILE)
+        write(f"{root}/etc/anaconda/profile.d/normie-kde.conf", NORMIE_PROFILE)
     write(f"{root}/usr/lib/os-release",
           f'NAME="{name}"\nID={ident}\nID_LIKE=fedora\nVERSION_ID=45\nPRETTY_NAME="{name} 45 (Alpha)"\nLOGO=normie-logo-icon\n'
           'HOME_URL="https://github.com/x/y"\n')
@@ -405,6 +457,7 @@ class AuditBranding(unittest.TestCase):
         self.assertEqual(rc, 0, out)
         self.assertIn("ok      os-release", out)
         self.assertIn("ok      default look-and-feel", out)
+        self.assertIn("ok      installer profile normie-kde matches ID=normie (boot-loader folder EFI/fedora)", out)
         self.assertIn("0 failure(s)", out)
 
     def test_fedoras_os_release_fails(self):
@@ -460,6 +513,39 @@ class AuditBranding(unittest.TestCase):
         self.assertIn("REVIEW  file named for Fedora: /usr/share/anaconda/pixmaps/fedora-logo.png", out)
         self.assertIn("REVIEW  mentions Fedora (1x): /usr/share/pixmaps/about.txt", out)
         self.assertNotIn("AnacondaInstaller", "".join(l for l in out.splitlines() if "REVIEW" in l))
+
+    def test_no_installer_profile_for_our_id_fails(self):
+        make_image(self.root, profile=False)
+        write(self.root + "/etc/anaconda/profile.d/fedora-kde.conf", FEDORA_KDE_PROFILE)
+        rc, out = self.run_audit("--root", self.root)
+        self.assertEqual(rc, 1)
+        self.assertIn("no installer profile matches ID=normie", out)
+
+    def test_a_profile_with_no_boot_loader_folder_is_a_review_item(self):
+        make_image(self.root, profile=False)
+        write(self.root + "/etc/anaconda/profile.d/normie-kde.conf",
+              "[Profile]\nprofile_id = normie-kde\n[Profile Detection]\nos_id = normie\n")
+        rc, out = self.run_audit("--root", self.root)
+        self.assertEqual(rc, 0, out)
+        self.assertIn("no boot-loader folder", out)
+
+    def test_expected_mentions_are_counted_and_the_rest_are_shown_with_their_lines(self):
+        make_image(self.root, extra={
+            "usr/share/anaconda/dbus/confs/org.fedoraproject.Anaconda.Boss.conf": "<busconfig>Fedora</busconfig>",
+            "usr/share/metainfo/org.fedoraproject.dejavu-fonts.metainfo.xml": "<id>org.fedoraproject.dejavu</id>",
+            "etc/anaconda/profile.d/fedora-server.conf": "profile_id = fedora-server\n",
+            "usr/share/applications/liveinst.desktop": "[Desktop Entry]\nName=Install\nComment=Install Fedora to disk\n",
+            "usr/share/applications/org.fedoraproject.MediaWriter.desktop": "Name=Fedora Media Writer\n"})
+        rc, out = self.run_audit("--root", self.root)
+        self.assertEqual(rc, 0, out)
+        reviewed = "\n".join(l for l in out.splitlines() if l.startswith("REVIEW"))
+        self.assertNotIn("Anaconda.Boss", reviewed)
+        self.assertNotIn("dejavu", reviewed)
+        self.assertNotIn("fedora-server", reviewed)
+        self.assertIn("/usr/share/applications/liveinst.desktop", reviewed)       # a person could see this one
+        self.assertIn("MediaWriter.desktop", reviewed)                            # a Fedora-named app
+        self.assertIn("          > Comment=Install Fedora to disk", out)         # and the line is shown
+        self.assertRegex(out, r"note    \d+ files: installer D-Bus names")
 
     def test_fedoras_publisher_on_the_iso_fails(self):
         make_iso(self.iso, publisher="Fedora Project")

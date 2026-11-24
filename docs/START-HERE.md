@@ -29,6 +29,10 @@ tools/try-iso.sh --fresh                        # start over with an empty disk
 Nothing touches your real disks. Things to look at: the boot menu, the login screen, the desktop and wallpaper,
 the Start button, the pins (Start menu and taskbar), Settings > About, the installer.
 
+Using virt-manager (Virtual Machine Manager) instead is fine: create a VM from the ISO, tick "Customize
+configuration before install", and under Overview set Firmware to **UEFI x86_64** (the one with OVMF in its name),
+then give it 6 GB of memory, 4 CPUs and a 40 GB disk. `try-iso.sh` just does the same with QEMU directly.
+
 The audit is separate: run `cd ~/normie-linux && python3 tools/audit-branding.py` in a terminal on your own
 computer, not inside the VM. It reads the build output on your disk; the VM does not have it.
 
