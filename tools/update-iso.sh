@@ -106,7 +106,8 @@ main() {
 	tools/build.sh "$PROFILE" || die "The build failed." "The full log is $OUTDIR/$PROFILE.log; the last lines are shown above. Send me those."
 
 	echo
-	echo "All done. To look at the new ISO in a virtual machine:  tools/try-iso.sh   (then: python3 tools/audit-branding.py)"
+	echo "All done. To look at the new ISO in a virtual machine:  tools/try-iso.sh"
+	echo "To check the build for leftover Fedora names (run it in this terminal, not in the VM):  python3 tools/audit-branding.py"
 	echo "A system you installed earlier does NOT change;"
 	echo "only a system installed from this new ISO has these changes."
 }

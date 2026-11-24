@@ -14,8 +14,8 @@ sudo dnf install rpm-build createrepo_c
 ```
 
 After that `tools/update-iso.sh` and `tools/build.sh` build the packages by themselves when they changed.
-To do it by hand: `tools/build-rpms.sh`. After a build, `python3 tools/audit-branding.py` lists anything
-that still mentions Fedora (see `REBRANDING.md`).
+To do it by hand: `tools/build-rpms.sh`. After a build, run `python3 tools/audit-branding.py` in a terminal on your own computer (not in the VM); it lists
+anything that still mentions Fedora (see `REBRANDING.md`).
 
 ## Looking at a new ISO in a virtual machine
 
@@ -27,8 +27,10 @@ tools/try-iso.sh --fresh                        # start over with an empty disk
 ```
 
 Nothing touches your real disks. Things to look at: the boot menu, the login screen, the desktop and wallpaper,
-the Start button, the pins (Start menu and taskbar), Settings > About, the installer. Then run
-`python3 tools/audit-branding.py`.
+the Start button, the pins (Start menu and taskbar), Settings > About, the installer.
+
+The audit is separate: run `cd ~/normie-linux && python3 tools/audit-branding.py` in a terminal on your own
+computer, not inside the VM. It reads the build output on your disk; the VM does not have it.
 
 ## The one thing to remember: a patch changes the recipe, not the ISO
 

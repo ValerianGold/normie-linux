@@ -479,6 +479,7 @@ class AuditBranding(unittest.TestCase):
         rc, out = self.run_audit()
         self.assertEqual(rc, 2)
         self.assertIn("Nothing to audit", out)
+        self.assertIn("not inside the virtual machine", out)      # people tried it in the VM once
 
     def test_the_iso_reader_matches_the_real_layout(self):
         import importlib.util
@@ -560,6 +561,19 @@ class TryIso(unittest.TestCase):
         self.assertEqual(rc, 0, out)
         self.assertIn("qemu-system-x86_64", out)
         self.assertEqual(read_file(self.log), "")
+
+
+
+class WallpaperHasNoLogo(unittest.TestCase):
+    """The wallpaper once carried a small logo in its bottom-right corner; it must stay plain."""
+
+    def test_the_wallpaper_generator_never_draws_the_logo(self):
+        import ast
+        src = open(os.path.join(ROOT, "packaging", "make-assets.py")).read()
+        fn = next(n for n in ast.walk(ast.parse(src)) if isinstance(n, ast.FunctionDef) and n.name == "wallpaper")
+        calls = [c.func.id for c in ast.walk(fn) if isinstance(c, ast.Call) and isinstance(c.func, ast.Name)]
+        self.assertNotIn("logo", calls)
+        self.assertNotIn("panel", calls)
 
 
 if __name__ == "__main__":

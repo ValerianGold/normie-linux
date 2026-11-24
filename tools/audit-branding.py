@@ -268,7 +268,11 @@ def main(argv):
     if iso is None and os.path.isdir(prof):
         iso = newest(prof, ".iso")
     if root is None and iso is None:
-        print(f"Nothing to audit: no build found under {prof}. Pass --root DIR and/or --iso FILE.")
+        print(f"Nothing to audit: no build found under {prof}.\n"
+              "Run this in a terminal on the computer where you built the ISO (not inside the virtual machine),\n"
+              "from the normie-linux folder, once tools/update-iso.sh has finished:\n"
+              "    cd ~/normie-linux && python3 tools/audit-branding.py\n"
+              "Or point it at a build yourself with --root DIR and/or --iso FILE.")
         return 2
     rep = Report()
     if root:

@@ -85,11 +85,7 @@ def wallpaper(w, h, seed=45):
         s = unit * (2 if rnd.random() < 0.18 and rise < 0.5 else 1)
         ld.rectangle((x, y, x + s - 1, y + s - 1), fill=EMBER[heat] + (alpha,))
     im.alpha_composite(layer)
-    # the logo, small and quiet, bottom-right
-    size = h // 7
-    mark = logo(size)
-    mark.putalpha(mark.getchannel("A").point(lambda a: int(a * 0.85)))
-    im.alpha_composite(mark, (w - size - h // 18, h - size - h // 18))
+    # no logo on the wallpaper: the Start button and the login screen already carry it
     return im.convert("RGB")
 
 
