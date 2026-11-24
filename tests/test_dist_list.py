@@ -12,6 +12,12 @@ class DistList(unittest.TestCase):
         r = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "export-deps.py"), "--check"])
         self.assertEqual(r.returncode, 0, "dist/normie-deps.list is stale: run tools/export-deps.py")
 
+    def test_the_list_never_asks_installed_systems_for_our_image_only_packages(self):
+        # normie-release, normie-logos, ... live only in the build-time repository, not on installed systems
+        with open(os.path.join(ROOT, "dist", "normie-deps.list")) as fh:
+            names = [l.split("#")[0].strip() for l in fh]
+        self.assertEqual([n for n in names if n.startswith("normie-")], [])
+
     def test_every_line_passes_the_clients_name_filter(self):
         # the same rule normie-update applies; a name that fails would be silently ignored
         rule = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+-]{0,100}$")

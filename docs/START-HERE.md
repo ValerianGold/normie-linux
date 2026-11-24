@@ -4,6 +4,19 @@ Everything you need to build lives in this repository. Commands below assume
 you are in the repo root (`~/normie-linux`) on your **Fedora 45 build machine**,
 which already has KIWI (`kiwi-cli`) installed.
 
+## One-time setup for the Normie packages
+
+The image contains our own release files, logos, wallpaper and Plasma look (`packaging/`). Building them
+needs two tools, installed once:
+
+```
+sudo dnf install rpm-build createrepo_c
+```
+
+After that `tools/update-iso.sh` and `tools/build.sh` build the packages by themselves when they changed.
+To do it by hand: `tools/build-rpms.sh`. After a build, `python3 tools/audit-branding.py` lists anything
+that still mentions Fedora (see `REBRANDING.md`).
+
 ## The one thing to remember: a patch changes the recipe, not the ISO
 
 ```

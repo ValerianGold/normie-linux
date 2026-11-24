@@ -1,8 +1,48 @@
 # Rebranding: becoming independent of Fedora's trademarks
 
-Status: **planned, not started.** Publishing this source repository is fine now. Publishing an ISO that
-still carries Fedora's branding is not. This document says why, what the work is, and what comes first.
+Status: **built in the source (stages R0 to R3), not yet checked on a built ISO.** The recipe now builds
+the image with our own release files, logos, wallpaper and Plasma look instead of Fedora's. What is left is
+to build it, boot it, run the audit (`tools/audit-branding.py`) and fix what it finds (R3), then ask Fedora's
+legal list (R4) before any ISO is published (R5). Publishing this source repository is fine now.
 (Not legal advice; Fedora's own legal list is the place to confirm the open points below.)
+
+## How it works now
+
+| Piece | Where | What it does |
+|---|---|---|
+| `normie-release` | `packaging/normie-release/` | `/etc/os-release` (`NAME="Normie Linux"`, `ID=normie`, `ID_LIKE=fedora`), the version macros, dnf defaults, login banner. Forked from Fedora's `generic-release` 45 (MIT) |
+| `normie-logos` | `packaging/normie-logos/` | Our logo as the system icon and the Start button (`start-here`), the installer artwork and the boot-splash watermark |
+| `normie-backgrounds-kde` | `packaging/normie-backgrounds-kde/` | The default wallpaper (also `/usr/share/wallpapers/Default`) |
+| `normie-lookandfeel` | `packaging/normie-lookandfeel/` | The default Plasma look (dark Breeze, our wallpaper, our logo on the Start button) and **Update & Repair pinned in the Start menu** (D-12) |
+
+The four are built on the build host by `tools/build-rpms.sh` (needs `sudo dnf install rpm-build createrepo_c`
+once) into a local repository, `/var/lib/normie-linux/rpms`, which `repositories/normie-local.xml` gives to
+KIWI. It is used only while building; installed systems never see it. `tools/update-iso.sh` does this step
+for you. The artwork under `packaging/*/files/` is generated from `branding/normie-logo.svg` by
+`packaging/make-assets.py` and committed, so building needs no image tools.
+
+`components/normie/branding.xml` names our packages and excludes Fedora's branded ones. Fedora's own
+files stay untouched: `Normie-Live` now requires `KDE-Desktop` and `LiveInstall` (what Fedora's
+`KDE-Desktop-Live` is made of) instead of `KDE-Desktop-Live` itself, because that profile names
+`fedora-release-kde`. `config.sh` points the default Plasma look at ours.
+
+Kept on purpose, because they are Fedora's repositories and tools: `fedora-repos`, `fedora-gpg-keys`,
+`fedora-third-party`, `fedora-flathub-remote`, `fedora-workstation-repositories`, `fedora-appstream-metadata`,
+`NetworkManager-config-connectivity-fedora`, and the `%fedora` / `.fc45` macros and `ID_LIKE=fedora`.
+Two names we could not change because other software owns them: the installer's launcher icon is still called
+`org.fedoraproject.AnacondaInstaller` (we ship our logo under that name) and `normie-lookandfeel` also
+provides the capability name `plasma-lookandfeel-fedora` in case a package asks for it.
+
+## Known gaps to check on the first built ISO
+
+- The installer (Anaconda) picks its product settings by the system's `ID`. Ours is `normie`, so it may use
+  its defaults instead of Fedora KDE's (for example the disk layout). The audit lists `/etc/anaconda/product.d`.
+- Whether the KDE settings or any other package still hard-requires something we excluded
+  (`tools/solve-check.py` reports that before the long build).
+- Whether `fedora-third-party` works when `ID` is not `fedora` (Update & Repair falls back to adding Flathub itself).
+- The Start menu pin is written as a plain setting; Plasma 6.8 keeps favorites in its activity database, so
+  confirm it appears on a fresh install.
+- Text baked into the initial RAM disk (boot splash) and the GRUB menu title can only be seen by booting.
 
 ## What Fedora requires of a remix
 
@@ -71,17 +111,19 @@ URLs, `DEFAULT_HOSTNAME`; remove `REDHAT_BUGZILLA_*`; keep `ID_LIKE=fedora`, `VE
 ## Stages
 
 1. **R0, inventory.** Done (above).
-2. **R1, our own package repository** (also solves lane 3 in `ROLLING-OUT-FIXES.md`). Copr is the easiest start.
-3. **R2, build** `normie-release`, `normie-logos`, `normie-release-notes` (and `normie-tools` for our scripts).
-   Test in a VM: boots, logs in, `dnf upgrade` works, RPM Fusion installs, `rpm -E %fedora` still prints 45.
-4. **R3, swap them into the image** (`teams/kde.xml` names `fedora-release-kde` as a bootstrap package), rebuild,
-   then search the whole image for the word "Fedora" in os-release, GRUB, boot splash, login screen,
-   installer and wallpapers.
+2. **R1, our own public package repository** (also solves lane 3 in `ROLLING-OUT-FIXES.md`). Copr is the
+   easiest start. Not needed to build an ISO any more (the local repository does that); needed so that
+   installed systems keep receiving updates to our own packages.
+3. **R2, build** `normie-release`, `normie-logos`, `normie-backgrounds-kde`, `normie-lookandfeel`. **Done in the
+   source**, tested without rpmbuild by `tests/test_packaging.py`. Still to do in a VM: boots, logs in,
+   `dnf upgrade` works, RPM Fusion installs, `rpm -E %fedora` still prints 45.
+4. **R3, swap them into the image.** **Done in the source** (`components/normie/branding.xml`). Still to do:
+   build, then run `python3 tools/audit-branding.py` and look at what it prints; boot the ISO and look at
+   the boot menu, the login screen, the installer and the desktop.
 5. **R4, ask Fedora's legal list to review** the audit result before publishing.
 6. **R5, publish** the ISO.
 
 ## What is already done
 
-`NOTICE.md` states that Normie Linux is not affiliated with Fedora and that Fedora's branding must be
-replaced before any ISO is published. `Normie-Linux.kiwi` already uses the name Normie-Linux for the image
-and the ISO label. A draft logo is in `branding/` (`normie-logo.svg`).
+`NOTICE.md` states that Normie Linux is not affiliated with Fedora. The image is named Normie-Linux, the ISO
+publisher is "Normie Linux contributors", the final logo is in `branding/`, and R0 to R3 above are in the source.

@@ -9,7 +9,7 @@
   are left untouched so upstream fixes can be merged in. See docs/UPSTREAM-CHANGES.md.
 
   Profiles you can build (see components/normie/profiles.xml):
-    Normie-Live        Milestone 1: Fedora 45 KDE live ISO under the Normie name.
+    Normie-Live        Milestone 1: Fedora 45 KDE live ISO under the Normie name and branding.
     Normie-Full-Live   Milestone 2: adds RPM Fusion + the full dependency set.
 -->
 <image schemaversion="7.4" name="Normie-Linux">
@@ -30,6 +30,7 @@
 	<!-- Repositories -->
 	<include from="this://./repositories/core.xml"/>
 	<include from="this://./repositories/rpmfusion.xml"/>
+	<include from="this://./repositories/normie-local.xml"/>
 
 	<!-- Fedora building blocks needed for a KDE live ISO (unmodified) -->
 	<include from="this://./components/common.xml"/>
@@ -46,6 +47,7 @@
 	<include from="this://./components/normie/deps.xml"/>
 	<include from="this://./components/normie/deps-universal.xml"/>
 	<include from="this://./components/normie/tools.xml"/>
+	<include from="this://./components/normie/branding.xml"/>
 
 	<packages type="bootstrap">
 		<package name="filesystem"/>

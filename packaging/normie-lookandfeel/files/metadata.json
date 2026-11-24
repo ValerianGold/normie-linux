@@ -1,0 +1,15 @@
+{
+    "KPackageStructure": "Plasma/LookAndFeel",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Normie Linux contributors"
+            }
+        ],
+        "Category": "",
+        "Description": "Normie Linux default look: dark Breeze with the Normie wallpaper and Start menu",
+        "Id": "org.normielinux.normie.desktop",
+        "License": "GPL-2.0-or-later",
+        "Name": "Normie Linux"
+    }
+}

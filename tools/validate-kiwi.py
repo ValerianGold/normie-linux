@@ -7,12 +7,14 @@ Catches the mistakes that otherwise surface 30 minutes into a build:
   - a profile that requires / references a profile nobody defines
   - the same profile defined twice
   - an ISO volume label longer than 32 characters
+  - (Normie profiles) a Fedora-branded package named in the image, or our release package missing
 
 Usage (from the repo root):
   python3 tools/validate-kiwi.py                       # checks Normie-Linux.kiwi
   python3 tools/validate-kiwi.py Fedora.kiwi KDE-Desktop-Live
   python3 tools/validate-kiwi.py Normie-Linux.kiwi Normie-Full-Live
 """
+import re
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
@@ -89,6 +91,40 @@ for prof in want:
             problems.append(f"ISO label for {prof} is {len(volid)} chars")
     except Exception as e:
         problems.append(f"label generator failed for {prof}: {e}")
+
+# ---- Normie branding: the image must not name Fedora's identity packages, and must name ours.
+# (components/normie/branding.xml lists them as <ignore>, which is allowed.)
+BRANDED = re.compile(r"^(fedora-release(-.*)?|fedora-logos(-.*)?|generic-(release|logos)(-.*)?|f\d+-backgrounds(-.*)?|"
+                     r"desktop-backgrounds-kde|plasma-lookandfeel-fedora|plasma-welcome-fedora|"
+                     r"breeze-icon-theme-fedora|fedora-bookmarks|libreport-fedora)$")
+OURS = ("normie-release", "normie-logos", "normie-backgrounds-kde", "normie-lookandfeel")
+if kiwi == "Normie-Linux.kiwi":
+    for prof in want:
+        if prof not in defined:
+            continue
+        active = closure(prof)
+        named, boot = set(), set()
+        for f in files:
+            try:
+                r = ET.parse(f).getroot()
+            except (OSError, ET.ParseError):
+                continue
+            for grp in r.iter("packages"):
+                profs = grp.get("profiles")
+                if profs is not None and not (active & {x.strip() for x in profs.split(",")}):
+                    continue
+                for pk in grp.findall("package"):
+                    named.add(pk.get("name"))
+                    if grp.get("type") == "bootstrap":
+                        boot.add(pk.get("name"))
+        for n in sorted(x for x in named if x and BRANDED.match(x)):
+            problems.append(f"{prof} installs '{n}', which carries Fedora's branding")
+        for n in OURS:
+            if "normie-release" == n and n not in boot:
+                problems.append(f"{prof} does not install normie-release in the bootstrap stage")
+            elif n not in named:
+                problems.append(f"{prof} does not install {n}")
+        print(f"  Branding: {prof} installs our release, logos, wallpaper and look; no Fedora-branded packages")
 
 print()
 if problems:

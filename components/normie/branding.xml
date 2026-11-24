@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Normie Linux branding: what takes the place of Fedora's identity, logos, wallpaper and Plasma look.
+  See docs/REBRANDING.md. The four normie-* packages are built from packaging/ (tools/build-rpms.sh).
+
+  Fedora's own files (teams/kde.xml, components/*) are left untouched so upstream fixes can still be
+  merged in. We get the same result by NOT using the Fedora profile that names fedora-release-kde
+  (Normie-Live requires KDE-Desktop and LiveInstall instead; see profiles.xml), and by excluding the
+  Fedora-branded packages below so nothing pulls them back in.
+
+  Deliberately KEPT, because they are Fedora's repositories and tools rather than branding:
+  fedora-repos, fedora-gpg-keys, fedora-third-party, fedora-flathub-remote,
+  fedora-workstation-repositories, fedora-appstream-metadata, NetworkManager-config-connectivity-fedora.
+-->
+<image>
+	<packages type="bootstrap" patternType="plusRecommended" profiles="Normie-Live">
+		<package name="normie-release"/>
+		<ignore name="fedora-release"/>
+		<ignore name="fedora-release-kde"/>
+		<ignore name="fedora-release-kde-desktop"/>
+		<ignore name="fedora-release-common"/>
+		<ignore name="fedora-release-identity"/>
+		<ignore name="fedora-release-identity-kde"/>
+		<ignore name="fedora-release-identity-kde-desktop"/>
+		<ignore name="generic-release"/>
+		<ignore name="generic-release-common"/>
+	</packages>
+	<packages type="image" patternType="plusRecommended" profiles="Normie-Live">
+		<package name="normie-logos"/>
+		<package name="normie-backgrounds-kde"/>
+		<package name="normie-lookandfeel"/>
+		<!-- Fedora's plasma-welcome-fedora used to bring these in; we drop its Fedora welcome pages but keep the tools -->
+		<package name="plasma-welcome"/>
+		<package name="fedora-flathub-remote"/>
+		<package name="fedora-third-party"/>
+		<package name="fedora-workstation-repositories"/>
+		<ignore name="fedora-release"/>
+		<ignore name="fedora-release-kde"/>
+		<ignore name="fedora-release-kde-desktop"/>
+		<ignore name="fedora-release-common"/>
+		<ignore name="fedora-release-identity"/>
+		<ignore name="fedora-release-identity-kde"/>
+		<ignore name="fedora-release-identity-kde-desktop"/>
+		<ignore name="fedora-logos"/>
+		<ignore name="generic-logos"/>
+		<ignore name="generic-release"/>
+		<ignore name="generic-release-common"/>
+		<ignore name="f45-backgrounds-base"/>
+		<ignore name="f45-backgrounds-kde"/>
+		<ignore name="desktop-backgrounds-kde"/>
+		<ignore name="plasma-lookandfeel-fedora"/>
+		<ignore name="plasma-welcome-fedora"/>
+		<ignore name="breeze-icon-theme-fedora"/>
+		<ignore name="fedora-bookmarks"/>
+		<ignore name="libreport-fedora"/>
+	</packages>
+</image>

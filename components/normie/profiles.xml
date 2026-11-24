@@ -11,9 +11,12 @@
 		<!-- Internal building block (not built on its own): RPM Fusion + dependency set -->
 		<profile name="NormieFull" description="Normie Linux: RPM Fusion repositories plus the full dependency set"/>
 
-		<!-- Milestone 1: proves the new repo builds. Same content as Fedora KDE. -->
+		<!-- Milestone 1: the Fedora 45 KDE content under the Normie name and branding.
+		     NOT based on Fedora's KDE-Desktop-Live profile: that one names fedora-release-kde. It is
+		     built from the same two pieces (KDE-Desktop and LiveInstall), plus components/normie/branding.xml. -->
 		<profile name="Normie-Live" description="Normie Linux live ISO (Fedora 45 KDE base)">
-			<requires profile="KDE-Desktop-Live"/>
+			<requires profile="KDE-Desktop"/>
+			<requires profile="LiveInstall"/>
 		</profile>
 
 		<!-- Milestone 2: the real target. DO NOT build until tools/check-packages.py passes. -->

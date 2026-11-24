@@ -11,9 +11,10 @@
 #   1 apply the patch(es); one that is already applied is skipped, not an error
 #   2 run the automated tests
 #   3 check the image description is sound
-#   4 check every package name exists            (saved to ~/normie-linux-out/preflight.txt)
-#   5 check the whole package set installs together
-#   6 build the ISO; the previous ISO is kept in ~/normie-linux-out/isos/
+#   4 build the Normie packages (release files, logos, wallpaper, Plasma look) if they changed
+#   5 check every package name exists            (saved to ~/normie-linux-out/preflight.txt)
+#   6 check the whole package set installs together
+#   7 build the ISO; the previous ISO is kept in ~/normie-linux-out/isos/
 #
 # A patch only changes the source. The ISO changes only when this script (or tools/build.sh) builds it.
 set -u
@@ -25,7 +26,7 @@ OUTDIR="${NORMIE_OUT:-$USER_HOME/normie-linux-out}"
 SUDO=sudo
 { [ "$EUID" -eq 0 ] || [ "${NORMIE_TEST:-0}" = 1 ]; } && SUDO=""
 
-step() { echo; echo "[$1/6] $2"; }
+step() { echo; echo "[$1/7] $2"; }
 die() { echo >&2; echo "STOPPED: $1" >&2; [ -n "${2:-}" ] && echo "$2" >&2; exit 1; }
 
 
@@ -37,7 +38,7 @@ main() {
 		case "$1" in
 			--profile) PROFILE="${2:-}"; shift ;;
 			--no-build) BUILD=0 ;;
-			-h|--help) sed -n '2,19p' "${BASH_SOURCE[0]}"; exit 0 ;;
+			-h|--help) sed -n '2,20p' "${BASH_SOURCE[0]}"; exit 0 ;;
 			-*) echo "Unknown option: $1 (try --help)" >&2; exit 2 ;;
 			*) PATCHES+=("$1") ;;
 		esac
@@ -81,12 +82,19 @@ main() {
 	python3 tools/validate-kiwi.py || die "The image description has a structural problem." "Send me the output above."
 
 	# ---------------------------------------------------------------- 4-5 packages
-	step 4 "Checking that every package name exists on Fedora"
+	step 4 "Building the Normie Linux packages (only if they changed)"
+	if [ -x tools/build-rpms.sh ]; then
+		tools/build-rpms.sh --if-needed || die "The Normie packages could not be built." "If it says rpm-build or createrepo_c is missing, run: sudo dnf install rpm-build createrepo_c   then run this again."
+	else
+		echo "This version has no packages of its own to build."
+	fi
+
+	step 5 "Checking that every package name exists on Fedora"
 	mkdir -p "$OUTDIR"
 	python3 tools/check-packages.py 2>&1 | tee "$OUTDIR/preflight.txt"
 	[ "${PIPESTATUS[0]}" -eq 0 ] || die "Some package names do not exist, so a build would fail." "Send me: $OUTDIR/preflight.txt"
 
-	step 5 "Checking that all the packages can be installed together"
+	step 6 "Checking that all the packages can be installed together"
 	$SUDO python3 tools/solve-check.py "$PROFILE" || die "The packages conflict or cannot be resolved." "Send me the lines above (the full output is in solve-check.log)."
 
 	# ---------------------------------------------------------------- 6 build
@@ -94,7 +102,7 @@ main() {
 		echo; echo "Checks passed. Skipping the build as requested (--no-build)."
 		exit 0
 	fi
-	step 6 "Building the ISO ($PROFILE). This takes a while."
+	step 7 "Building the ISO ($PROFILE). This takes a while."
 	tools/build.sh "$PROFILE" || die "The build failed." "The full log is $OUTDIR/$PROFILE.log; the last lines are shown above. Send me those."
 
 	echo

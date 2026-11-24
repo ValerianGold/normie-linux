@@ -1,0 +1,16 @@
+# dist macros.
+#
+# Normie Linux is built on Fedora 45 and uses Fedora's packages, so the Fedora version macros stay:
+# RPM Fusion, Copr and every Fedora package expect %fedora and .fc45.
+
+%__bootstrap         ~bootstrap
+%fedora              45
+%fc45                1
+%distcore            .fc%{fedora}
+%dist                %{!?distprefix0:%{?distprefix}}%{expand:%{lua:for i=0,9999 do print("%{?distprefix" .. i .."}") end}}%{distcore}%{?with_bootstrap:%{__bootstrap}}%{?buildrelease:+build%{buildrelease}}
+%dist_vendor         Normie Linux
+%dist_name           Normie Linux
+%dist_purl_namespace fedora
+%dist_home_url       @HOME_URL@
+%dist_bug_report_url @HOME_URL@/issues
+%dist_debuginfod_url ima:enforcing https://debuginfod.fedoraproject.org/ ima:ignore

@@ -14,15 +14,21 @@ changes to Fedora's files are listed in `docs/UPSTREAM-CHANGES.md`.
 not affiliated with or endorsed by the Fedora Project or Red Hat.
 
 Fedora's trademark guidelines do not permit redistributing a modified system
-under Fedora's name and branding. **Before publishing any Normie Linux ISO**,
-the branding packages inherited from Fedora (`fedora-release*`,
-`fedora-logos`, and similar) must be replaced. This is tracked as Milestone 6
-in `docs/ROADMAP.md`. Publishing only this source repository is fine now.
+under Fedora's name and branding. Normie Linux therefore replaces the branding
+packages inherited from Fedora (`fedora-release*`, `fedora-logos`, Fedora's wallpapers
+and Plasma look) with its own (`packaging/`, see `docs/REBRANDING.md`). It still says
+that it is *based on* Fedora, uses Fedora's package repositories, and keeps `ID_LIKE=fedora`
+so Fedora's software recognises it. **Before publishing any Normie Linux ISO** the result must be
+checked on a built image and reviewed by Fedora's legal list (Milestone 6 in `docs/ROADMAP.md`).
+Publishing only this source repository is fine now.
 
 ## The Normie Linux logo
 
 The logo in `branding/` (a white N with pixel flames on a dark badge) is original artwork made for this
 project. It contains no Fedora artwork. It is covered by the same license as the rest of the project.
+The wallpaper, icons and installer images under `packaging/` are generated from it
+(`packaging/make-assets.py`) and are covered the same way. `packaging/normie-release/` is derived from
+Fedora's `generic-release` package (MIT licence, `packaging/normie-release/LICENSE`).
 
 ## Third-party software
 

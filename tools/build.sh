@@ -34,6 +34,11 @@ LOG="$OUT/$PROFILE.log"
 
 cd "$REPO_DIR"
 
+# Normie images use our own packages (release files, logos, wallpaper, Plasma look); make sure they are built
+if [ "$KIWI_FILE" = "Normie-Linux.kiwi" ] && [ -x "$REPO_DIR/tools/build-rpms.sh" ]; then
+	"$REPO_DIR/tools/build-rpms.sh" --if-needed || { echo "Cannot build without the Normie packages." >&2; exit 1; }
+fi
+
 # Record which version of the project this build is made from (it goes inside the ISO)
 "$REPO_DIR/tools/write-build-info.sh" "$PROFILE"
 chown -R "$BUILD_USER": "$REPO_DIR/root/usr/share/normie" 2>/dev/null || true

@@ -156,6 +156,44 @@ class BuildScript(unittest.TestCase):
         self.assertEqual(r.returncode, 2)
         self.assertFalse(os.path.exists(f"{out}/isos"))
 
+    # ---- the Normie packages must be built before a Normie image is
+    def add_rpm_stub(self, d, fail=False):
+        stub = "#!/bin/bash\necho \"build-rpms.sh $*\" >> \"$RPM_LOG\"\n" + ("exit 1\n" if fail else "exit 0\n")
+        with open(f"{d}/tools/build-rpms.sh", "w") as fh:
+            fh.write(stub)
+        os.chmod(f"{d}/tools/build-rpms.sh", 0o755)
+
+    def build_with_log(self, d, out, profile):
+        log = f"{out}/rpm-calls.log"
+        env = dict(os.environ, NORMIE_OUT=out, NORMIE_USER="root", RPM_LOG=log, FAKE_ISO_CONTENT="iso", FAKE_KIWI_RC="0")
+        env.pop("SUDO_USER", None)
+        r = sh("bash", f"{d}/tools/build.sh", profile, cwd=d, env=env)
+        return r, (read(log).splitlines() if os.path.exists(log) else [])
+
+    def test_a_normie_build_makes_sure_the_packages_are_built_first(self):
+        d, out = self.make_repo(), self.out_dir()
+        with open(f"{d}/Normie-Linux.kiwi", "w") as fh:
+            fh.write("<image/>")
+        self.add_rpm_stub(d)
+        r, calls = self.build_with_log(d, out, "Normie-Full-Live")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(calls, ["build-rpms.sh --if-needed"])
+
+    def test_the_untouched_fedora_baseline_does_not_need_our_packages(self):
+        d, out = self.make_repo(), self.out_dir()
+        self.add_rpm_stub(d)
+        r, calls = self.build_with_log(d, out, "KDE-Desktop-Live")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(calls, [])
+
+    def test_a_normie_build_stops_when_the_packages_cannot_be_built(self):
+        d, out = self.make_repo(), self.out_dir()
+        self.add_rpm_stub(d, fail=True)
+        r, _ = self.build_with_log(d, out, "Normie-Full-Live")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("Cannot build without the Normie packages", r.stderr)
+        self.assertEqual(glob.glob(f"{out}/*-build/*.iso"), [])
+
 
 if __name__ == "__main__":
     unittest.main()

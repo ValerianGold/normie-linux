@@ -1,0 +1,13 @@
+{
+    "KPackageStructure": "Wallpaper/Images",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Normie Linux contributors"
+            }
+        ],
+        "Id": "Normie",
+        "License": "GPL-3.0-or-later",
+        "Name": "Normie"
+    }
+}

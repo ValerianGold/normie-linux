@@ -17,6 +17,8 @@ Usage:
 
 Run from the repo root. Pass --save-avail FILE to also save the repo listing.
 
+Packages we build ourselves (packaging/*/*.spec) count as available.
+
 Before running, enable the same repos KIWI will use (Fedora, updates,
 rpmfusion-free [, rpmfusion-nonfree]) on the host so RPM Fusion packages are
 visible. Setup commands are in docs/START-HERE.md.
@@ -62,6 +64,20 @@ def load_available(avail_file):
     sys.exit("Could not run dnf5/dnf repoquery. Run this on the Fedora build host.")
 
 
+def local_package_names():
+    """Names of the packages we build ourselves (packaging/*/*.spec). They are not in any online
+    repository; tools/build-rpms.sh puts them in a local one the build reads."""
+    names = set()
+    for spec in glob.glob("packaging/*/*.spec"):
+        with open(spec) as fh:
+            for line in fh:
+                m = re.match(r"^Name:\s*(\S+)", line)
+                if m:
+                    names.add(m.group(1))
+                    break
+    return names
+
+
 def collect(files):
     pkgs, keys = {}, {}
     for f in files:
@@ -102,6 +118,7 @@ def main():
         sys.exit("No input files found. Run from the project root.")
     pkgs, keys = collect(files)
     avail = load_available(avail_file)
+    avail |= {f"{n}.noarch" for n in local_package_names()}
     names_by_arch = {}
     for entry in avail:
         n, _, arch = entry.rpartition(".")

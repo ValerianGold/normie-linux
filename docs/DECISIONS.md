@@ -85,8 +85,10 @@ overwrite. Agreed alternative: pin it in the Start menu's favorites, plus a remi
   poking that at runtime would be version-specific and could silently do nothing.
   Decision: do NOT hack it in at runtime. The correct, upgrade-safe place is the distribution's own default
   Plasma layout, which ships in a look-and-feel package. We have to replace Fedora's `plasma-lookandfeel-fedora`
-  anyway for the rebrand (M6), so the pin is added there. Until then the app is in the menu under System, and
-  the reminder keeps it from being forgotten.
+  anyway for the rebrand (M6), so the pin is added there. **Done** in `packaging/normie-lookandfeel` (its
+  Kickoff setup script writes the pinned list). It is written as a plain setting that Kickoff imports on first
+  start; confirm on a fresh install that it appears. If it does not, the app is still in the menu under System and
+  on the desktop, and the reminder keeps it from being forgotten.
 
 ## D-13 Snap: REMOVED
 Snap was added on request, then removed by the maintainer: it adds little (nearly everything is on Flathub),
@@ -117,7 +119,16 @@ Still to confirm in the software center: how Discover displays an app that exist
 Not enabled, on purpose: Fedora's `updates-testing` repository (pre-release system updates; the likeliest
 source of breakage, and automatic updates plus no rollback make it a poor default).
 
-## D-16 Rebranding approach: PLANNED
-Fork `generic-release` into our own `normie-release` (plus logos and release notes), keeping `system-release`,
-`%fedora`/`.fc45`, `ID_LIKE=fedora` and the service presets so Fedora's repositories and upgrades keep working.
-Needs our own package repository first. Details, stages and the open legal question: `REBRANDING.md`.
+## D-16 Rebranding approach: DECIDED and built (not yet checked on a built ISO)
+Fork `generic-release` into our own `normie-release`, keeping `system-release`, `%fedora`/`.fc45`,
+`ID_LIKE=fedora` and the service presets so Fedora's repositories and upgrades keep working; plus our own logos,
+wallpaper and Plasma look. Reached the image through a build-time-only local repository (D-17), so no public
+package repository is needed to build an ISO. Fedora's repository and tool packages keep their names.
+Details, stages and the open legal question: `REBRANDING.md`.
+
+## D-17 How our own packages reach the image: DECIDED
+`tools/build-rpms.sh` builds `packaging/*` into `/var/lib/normie-linux/rpms`; `repositories/normie-local.xml`
+hands it to KIWI (not copied into the image, unsigned packages accepted for this one repository only).
+Chosen over a public repository because it works today with no accounts or keys, and over overlay files because
+the package database must say Normie, not Fedora. Cost: installed systems do not receive updates to these packages
+until the public repository (M3) exists.

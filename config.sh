@@ -27,6 +27,32 @@ if [[ "$kiwi_profiles" == *"Normie"* ]]; then
 fi
 
 #======================================
+# NORMIE-LINUX CHANGE: default Plasma look and feel
+#--------------------------------------
+## Fedora's KDE settings name Fedora's own look-and-feel as the default. That package is not in a Normie
+## image (see components/normie/branding.xml), so point every such setting at ours instead. Looks in
+## /etc and /usr/share/kde-settings only. If nothing named Fedora's look-and-feel, set ours explicitly.
+## Everything it does is printed, so the build log shows what was found.
+if [[ "$kiwi_profiles" == *"Normie"* ]]; then
+	NORMIE_LNF="org.normielinux.normie.desktop"
+	normie_changed=0
+	while IFS= read -r f; do
+		sed -i -E "s/org\.fedoraproject\.fedora(dark|light)?\.desktop/$NORMIE_LNF/g" "$f"
+		echo "Normie: default look-and-feel set to $NORMIE_LNF in $f"
+		normie_changed=1
+	done < <(grep -rlIE 'org\.fedoraproject\.fedora(dark|light)?\.desktop' /etc /usr/share/kde-settings 2>/dev/null || true)
+	if [ "$normie_changed" -eq 0 ]; then
+		if command -v kwriteconfig6 >/dev/null 2>&1; then
+			mkdir -p /etc/xdg
+			kwriteconfig6 --file /etc/xdg/kdeglobals --group KDE --key LookAndFeelPackage "$NORMIE_LNF" \
+				&& echo "Normie: nothing named Fedora's look-and-feel; set $NORMIE_LNF in /etc/xdg/kdeglobals"
+		else
+			echo "Normie: WARNING could not set the default look-and-feel (no kwriteconfig6)"
+		fi
+	fi
+fi
+
+#======================================
 # Set SELinux booleans
 #--------------------------------------
 if [[ "$kiwi_profiles" != *"Container"* ]] && [[ "$kiwi_profiles" != *"FEX"* ]] && [[ "$kiwi_profiles" != *"WSL"* ]]; then

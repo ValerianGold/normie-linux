@@ -13,10 +13,12 @@ the body of the fire.
 - The dark badge keeps the white N visible on both light and dark backgrounds.
 - The art is original and is the project's own (no Fedora artwork is used).
 
-## Where it will be used
+## Where it is used
 
-The Start button (Kickoff launcher), the login and boot screens, `/etc/os-release` (`LOGO=`), the About page
-and the GitHub page. Sizes come from the SVG, for example on Fedora with librsvg:
+The Start button (Kickoff launcher), the boot and installer screens, `/etc/os-release` (`LOGO=`), the About page
+and the GitHub page. The system uses it through the `normie-logos` package: after changing the SVG run
+`python3 packaging/make-assets.py` to regenerate the icons, wallpaper and installer images (a test fails
+until you do). Sizes come from the SVG, for example on Fedora with librsvg:
 
 ```
 rsvg-convert -w 256 -h 256 branding/normie-logo.svg -o normie-logo-256.png

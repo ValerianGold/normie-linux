@@ -23,6 +23,11 @@ echo "build.sh $*" >> "$CALL_LOG"
 [ "${STUB_FAIL:-}" = build ] && exit 1
 exit 0
 '''
+RPMS_STUB = '''#!/bin/bash
+echo "build-rpms.sh $*" >> "$CALL_LOG"
+[ "${STUB_FAIL:-}" = build-rpms ] && exit 1
+exit 0
+'''
 TEST_STUB = '''import os, unittest
 class T(unittest.TestCase):
     def test_it(self):
@@ -56,6 +61,7 @@ class UpdateIso(unittest.TestCase):
         for name in ("validate-kiwi.py", "check-packages.py", "solve-check.py"):
             write(self.tools(name), PY_STUB)
         write(self.tools("build.sh"), BUILD_STUB, 0o755)
+        write(self.tools("build-rpms.sh"), RPMS_STUB, 0o755)
         write(f"{self.repo}/tests/test_stub.py", TEST_STUB)
         self.env = dict(os.environ, NORMIE_TEST="1", NORMIE_OUT=self.out, CALL_LOG=self.log,
                         GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t", GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@t")
@@ -93,8 +99,8 @@ class UpdateIso(unittest.TestCase):
         rc, out = self.run_script(patch)
         self.assertEqual(rc, 0, out)
         self.assertTrue(os.path.exists(f"{self.repo}/feature.txt"))
-        self.assertEqual(self.calls(), ["validate-kiwi.py ", "check-packages.py ", "solve-check.py Normie-Full-Live",
-                                        "build.sh Normie-Full-Live"])
+        self.assertEqual(self.calls(), ["validate-kiwi.py ", "build-rpms.sh --if-needed", "check-packages.py ",
+                                        "solve-check.py Normie-Full-Live", "build.sh Normie-Full-Live"])
         self.assertIn("All done", out)
         self.assertTrue(os.path.exists(f"{self.out}/preflight.txt"))
 
@@ -137,7 +143,20 @@ class UpdateIso(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertIn("do not exist", out)
         self.assertIn("preflight.txt", out)
-        self.assertEqual(self.calls(), ["validate-kiwi.py ", "check-packages.py "])
+        self.assertEqual(self.calls(), ["validate-kiwi.py ", "build-rpms.sh --if-needed", "check-packages.py "])
+
+    def test_a_failure_building_the_normie_packages_stops_before_the_checks_and_the_build(self):
+        rc, out = self.run_script(STUB_FAIL="build-rpms")
+        self.assertEqual(rc, 1)
+        self.assertIn("could not be built", out)
+        self.assertIn("rpm-build createrepo_c", out)
+        self.assertEqual(self.calls(), ["validate-kiwi.py ", "build-rpms.sh --if-needed"])
+
+    def test_a_version_without_the_package_script_still_works(self):
+        os.remove(self.tools("build-rpms.sh"))
+        rc, out = self.run_script()
+        self.assertEqual(rc, 0, out)
+        self.assertIn("no packages of its own", out)
 
     def test_conflicts_stop_before_the_build(self):
         rc, out = self.run_script(STUB_FAIL="solve-check.py")

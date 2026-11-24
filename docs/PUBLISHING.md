@@ -81,7 +81,8 @@ git push
 
 GitHub release files are limited to about 2 GB each and these ISOs are larger. Host ISOs elsewhere
 (your own server, a torrent, a file host) and publish the SHA-256 checksum next to the download link.
-Only after the rebrand (`REBRANDING.md`, stage R5).
+Only after the rebrand has been checked (`REBRANDING.md`, stages R3 to R5). Where and how:
+`DISTRIBUTING-THE-ISO.md`.
 
 ## What must never be committed
 

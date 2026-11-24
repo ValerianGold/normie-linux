@@ -6,8 +6,9 @@ A beginner-friendly Linux distribution, based on Fedora, built so that ordinary
 users never have to open a terminal.
 
 > **Status: alpha, source only.** The system builds, boots, installs, updates itself and sets up NVIDIA
-> graphics drivers (tested on one real machine so far). **There are no public ISOs yet:** Fedora's branding has
-> to be replaced first ([docs/REBRANDING.md](docs/REBRANDING.md)). No snapshots or rollback yet, and the
+> graphics drivers (tested on one real machine so far). **There are no public ISOs yet:** the recipe replaces
+> Fedora's branding with its own, and that is being checked before any ISO is published
+> ([docs/REBRANDING.md](docs/REBRANDING.md)). No snapshots or rollback yet, and the
 > tools themselves update only by reinstalling until our own package repository exists
 > ([docs/ROADMAP.md](docs/ROADMAP.md)). Not for anything important.
 >
@@ -43,9 +44,10 @@ tools/build.sh                      # builds the Normie-Live ISO (Milestone 1)
 |---|---|
 | `Normie-Linux.kiwi` | The Normie Linux image description. Start reading here. |
 | `components/normie/` | Our own KIWI files: `profiles.xml` (what can be built) and `deps.xml` (dependency set). |
-| `repositories/rpmfusion.xml` | RPM Fusion repositories (ours). `core.xml` is Fedora's. |
+| `repositories/rpmfusion.xml`, `normie-local.xml` | RPM Fusion and our own build-time package repository (ours). `core.xml` is Fedora's. |
 | `root/` | Files copied into the ISO as-is, including the Update & Repair tools (`root/usr/libexec/normie/`). |
-| `tools/` | `build.sh`, `validate-kiwi.py`, `check-packages.py`, `solve-check.py`, `export-deps.py`. |
+| `packaging/` | Our own packages: release files, logos, wallpaper, Plasma look. They replace Fedora's branding packages. |
+| `tools/` | `build.sh`, `build-rpms.sh`, `validate-kiwi.py`, `check-packages.py`, `solve-check.py`, `export-deps.py`, `audit-branding.py`. |
 | `dist/` | `normie-deps.list`: the dependency list the Update & Repair button fetches from GitHub. |
 | `tests/` | Automated tests (simulated GPUs, fake commands). |
 | `docs/` | Start-here guide, roadmap, design decisions, how fixes roll out, rebranding plan, publishing steps. |

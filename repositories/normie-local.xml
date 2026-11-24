@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Normie Linux's own packages (packaging/*), built on the build host by tools/build-rpms.sh into
+  /var/lib/normie-linux/rpms. This repository exists only while the image is built: it is never
+  copied into the image (imageinclude is off), so no installed system looks for it.
+
+  The packages are not signed (they are built locally from this very repository), so package signature
+  checking is off for this one repository. Every Fedora and RPM Fusion repository stays fully checked.
+  Getting our packages onto installed systems later is Milestone 3 (a public repository), see docs/ROADMAP.md.
+-->
+<image>
+	<repository type="rpm-md" alias="normie-local" imageinclude="false" package_gpgcheck="false" priority="50">
+		<source path="dir:///var/lib/normie-linux/rpms"/>
+	</repository>
+</image>

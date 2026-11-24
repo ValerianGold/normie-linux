@@ -1,8 +1,8 @@
 # Normie Linux 0.1.0 alpha (source only)
 
 This is the first public release of the **recipe** for Normie Linux: the files that build the system. **There is
-no ISO to download yet.** Fedora's branding has to be replaced first (`docs/REBRANDING.md`), and an ISO will be
-published only after that.
+no ISO to download yet.** The recipe now replaces Fedora's branding with the project's own
+(`docs/REBRANDING.md`), but that has to be checked on a built system, and reviewed, before an ISO is published.
 
 Alpha means: it works for the person who built it, it has been tried on one real machine, and it is not for
 anything important.
@@ -28,8 +28,8 @@ anything important.
 
 ## Missing or limited
 
-- **No ISO yet.** Until the rebrand, parts of the system still say "Fedora" (for example the system name and the
-  logo on the Start button).
+- **No ISO yet.** The rebrand (own system name, logo, wallpaper and Plasma look) is in the recipe but has not been
+  audited on a built image, and the project wants Fedora's legal list to look at it before an ISO is published.
 - **No snapshots or rollback.** A one-click restore needs Btrfs snapshots, which are planned.
 - **The tools update only by reinstalling** until the project has its own package repository. The dependency
   list does update on an installed system, because it is fetched from this repository.

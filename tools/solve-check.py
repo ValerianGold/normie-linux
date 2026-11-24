@@ -76,9 +76,15 @@ specs = sorted(set(specs))
 excludes = sorted(set(excludes))
 release = (root.findtext("preferences/release-version") or "45").strip()
 
+# Our own packages (packaging/*) come from the local repository tools/build-rpms.sh makes
+local_repo = os.environ.get("NORMIE_LOCAL_REPO", "/var/lib/normie-linux/rpms")
+uses_local = any(e.get("alias") == "normie-local" for r in trees for e in r.iter("repository"))
+
 tmp = tempfile.mkdtemp(prefix="normie-solve-")
 cmd = ["dnf5", f"--installroot={tmp}", f"--releasever={release}", "--use-host-config",
        "install", "--assumeno", "--setopt=install_weak_deps=True"]
+if uses_local:
+    cmd.insert(1, f"--repofrompath=normie-local,file://{local_repo}")
 if excludes:
     cmd.append("--exclude=" + ",".join(excludes))
 cmd += specs
@@ -91,6 +97,14 @@ if print_only:
 if os.geteuid() != 0:
     shutil.rmtree(tmp, ignore_errors=True)
     sys.exit("Run with sudo (dnf needs root to create the install root).")
+
+if uses_local:
+    # build (or refresh) our own packages first; does nothing if they are already up to date
+    here = os.path.dirname(os.path.abspath(__file__))
+    built = subprocess.run(["bash", os.path.join(here, "build-rpms.sh"), "--if-needed"])
+    if built.returncode != 0:
+        shutil.rmtree(tmp, ignore_errors=True)
+        sys.exit("Could not build the Normie packages (see above), so the package set cannot be checked.")
 
 print("Resolving (this downloads repository metadata, not packages)...\n")
 res = subprocess.run(cmd, capture_output=True, text=True)
