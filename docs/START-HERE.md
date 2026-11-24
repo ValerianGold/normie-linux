@@ -4,6 +4,40 @@ Everything you need to build lives in this repository. Commands below assume
 you are in the repo root (`~/normie-linux`) on your **Fedora 45 build machine**,
 which already has KIWI (`kiwi-cli`) installed.
 
+## The one thing to remember: a patch changes the recipe, not the ISO
+
+```
+patch or edit  -->  the repo (the recipe)  -->  tools/build.sh  -->  a NEW ISO  -->  install it  -->  a running system
+                                                (you must run it)                    (reinstall)       (which then updates itself from
+                                                                                                        Fedora, Flathub, RPM Fusion and
+                                                                                                        the GitHub package list)
+```
+
+- `git am` and edits change only the source in `~/normie-linux`. An ISO that is already in
+  `~/normie-linux-out/` stays exactly as it was. **Every change needs a new build to reach an ISO.**
+- A system you already installed does not receive recipe changes either (that needs our own package
+  repository, ROADMAP M3). It receives only Fedora's updates and the dependency list.
+
+**Which ISO do I have?** Every build now records the exact version it was made from:
+
+```
+cat ~/normie-linux-out/Normie-Full-Live-build/BUILD-INFO.txt   # next to the ISO (builds from now on)
+ls ~/normie-linux-out/isos/                                    # every ISO ever built, named by its commit
+cat /usr/share/normie/build-info                               # on a running or live system
+```
+
+`tools/build.sh` also keeps the previous ISO in `isos/` and clears the folder before building (kiwi will
+not build into a folder that already holds a build). For an ISO made before this existed, compare dates:
+
+```
+cd ~/normie-linux
+ls -l --time-style=long-iso ~/normie-linux-out/Normie-Full-Live-build/*.iso
+git log --date=iso --format='%cd  %h  %s' -8
+```
+
+The ISO must be **newer** than the newest commit you want in it. On an installed system,
+`ls /usr/libexec/normie/` also tells you: `normie-sources` means patch 0005 or later, `normie-lib.sh` means 0006 or later.
+
 ## 0. One-time setup
 
 ```
@@ -41,7 +75,7 @@ tools/build.sh
 
 - Builds `Normie-Live`: a Fedora 45 KDE live ISO under the Normie name. It
   should be identical in content to your earlier baseline.
-- Output goes to `~/normie-linux-out/Normie-Live-build/`.
+- Output goes to `~/normie-linux-out/Normie-Live-build/` (every ISO is also kept, named by commit, in `~/normie-linux-out/isos/`).
 - The full log is saved at `~/normie-linux-out/Normie-Live.log`. **If it fails,
   paste me the last ~60 lines of that file** (the script also prints them).
 - It takes a while and needs several GB of free disk space.

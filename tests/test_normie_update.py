@@ -121,6 +121,19 @@ class UpdateTests(unittest.TestCase):
         self.assertIn("live session", out)
         self.assertEqual(e.calls(), "")
 
+    def test_it_reports_which_build_it_is_running_on(self):
+        e = Env()
+        w(f"{e.fake}/build-info", "NORMIE_BUILD_COMMIT=abc123def456\nNORMIE_BUILD_DATE=2026-11-23T10:00Z\n")
+        e.env["NORMIE_BUILD_INFO"] = f"{e.fake}/build-info"
+        rc, out = e.run("--dry-run", root=False)
+        self.assertIn("INFO|This is Normie Linux build abc123def456 of 2026-11-23T10:00Z", out)
+
+    def test_no_build_info_file_means_no_build_line(self):
+        e = Env()
+        e.env["NORMIE_BUILD_INFO"] = f"{e.fake}/does-not-exist"
+        rc, out = e.run("--dry-run", root=False)
+        self.assertNotIn("This is Normie Linux build", out)
+
     def test_real_run_requires_root(self):
         rc, out = Env().run(root=False)
         self.assertEqual(rc, 1)

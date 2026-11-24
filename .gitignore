@@ -8,3 +8,6 @@ normie-linux-out/
 *.log
 __pycache__/
 *.pyc
+
+# Written by tools/write-build-info.sh at build time
+root/usr/share/normie/build-info
