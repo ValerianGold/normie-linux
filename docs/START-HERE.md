@@ -136,18 +136,28 @@ tools/build.sh Normie-Full-Live
 | Know what is decided vs open | `docs/DECISIONS.md` |
 | Know what to do next | `docs/ROADMAP.md` |
 
-## Applying a patch from Claude
+## Applying a patch from Claude and getting a new ISO (the one command)
 
-Yes: download the `.patch` file, then run the command given with it, from the repo folder.
-Patches apply in numeric order (0001, 0002, 0003...), each on top of the previous one.
+Download the `.patch` file, then run this, **replacing the number** with the patch you downloaded:
 
 ```
-cd ~/normie-linux
-git am ~/Downloads/<patch-file-name>.patch
+~/normie-linux/tools/update-iso.sh ~/Downloads/0010-*.patch
 ```
 
-`git am` adds the change as a normal commit. If it complains, run `git am --abort` and tell
-me the message; nothing is lost. To see what is applied: `git log --oneline`.
+It works from any folder. It applies the patch, runs every check, and builds a new ISO, stopping at the
+first problem and telling you what to do. A patch that is already applied is skipped, not an error. The
+ISO it replaces is kept in `~/normie-linux-out/isos/`, so nothing is ever lost.
+
+| You want | Run |
+|---|---|
+| Patch, check and rebuild (the usual) | `~/normie-linux/tools/update-iso.sh ~/Downloads/0010-*.patch` |
+| Several patches at once | `~/normie-linux/tools/update-iso.sh ~/Downloads/0010-*.patch ~/Downloads/0011-*.patch` |
+| Rebuild what is already in the repo | `~/normie-linux/tools/update-iso.sh` |
+| Apply and check but do not build yet | `~/normie-linux/tools/update-iso.sh --no-build ~/Downloads/0010-*.patch` |
+| Build the smaller base image | `~/normie-linux/tools/update-iso.sh --profile Normie-Live ~/Downloads/0010-*.patch` |
+
+If it stops, send me the message it printed (and `~/normie-linux-out/preflight.txt` if it names that file).
+To see what changed in a patch first: `git apply --stat ~/Downloads/0010-*.patch`.
 
 ## Run the tests
 

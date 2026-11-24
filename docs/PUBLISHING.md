@@ -41,9 +41,8 @@ in a browser. You should see the package list. If you do, installed systems will
 ## Routine
 
 ```
+~/normie-linux/tools/update-iso.sh ~/Downloads/<patch>.patch   # apply, check and rebuild (see START-HERE.md)
 cd ~/normie-linux
-git am ~/Downloads/<patch>.patch            # a change from Claude, or edit files yourself
-python3 -m unittest discover -s tests
 git push
 ```
 
