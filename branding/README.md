@@ -1,31 +1,28 @@
-# Branding
+# Normie Linux logo
 
-`normie-logo.svg` is the **draft v0** logo: a white letter N with a flame on its right stem, on a dark
-rounded badge. The badge keeps the white N visible on light and dark backgrounds. It was drawn for this
-project as an original work and is plain SVG shapes: no fonts, no embedded images, no scripts.
+`normie-logo.svg` is the logo: a white letter **N** on a dark rounded badge, wrapped in shaded pixel-art flames
+(16/32-bit style, with six heat shades from yellow to dark red). The letter itself is the heat source: the fire is hottest
+right against every outer edge and cools outwards, so the sides and the top burn as one continuous flame that
+narrows towards the top. Tongues of flame also curl up the sides, with a darker crease where each one meets
+the body of the fire.
 
-| Part | Value |
-|---|---|
-| Canvas | 512 x 512, square |
-| Badge | rounded square, corner radius 112, gradient `#1c2236` to `#0b0e18` |
-| N | white `#ffffff`, three shapes (two stems and a diagonal) |
-| Flame | gradient `#ff4d12` to `#ffb52e`, middle layer `#ffd23f`, core `#fff1b8` |
+- The N is always fully intact and white. The flames are drawn around and above it, never over it.
+  `tests/test_branding.py` checks this pixel by pixel, so a later edit cannot quietly damage the letter.
+- It is drawn on a 64 x 64 pixel grid using only plain rectangles (no fonts, scripts or outside references),
+  so it renders the same everywhere and is safe to ship. It stays readable down to about 24 px.
+- The dark badge keeps the white N visible on both light and dark backgrounds.
+- The art is original and is the project's own (no Fedora artwork is used).
 
-It stays recognizable down to about 24 pixels; below that the flame becomes a dot, which is fine.
+## Where it will be used
 
-## Before it is final
-
-- Search trademark databases for lookalike marks. Flame-and-letter logos are common.
-- Decide the license for the artwork (it is currently covered by the repository's GPL-3.0-or-later).
-- Make a one-color version (N and flame in a single color, no badge) for panel and tray icons, which
-  Plasma recolors to match the theme.
-
-## Where a logo is used (all generated from this one file by the future `normie-logos` package)
-
-Start menu button, login screen, boot splash, installer sidebar and header, GRUB and ISO boot menu,
-wallpapers, the `LOGO=` entry in `/etc/os-release`, the About page. Sizes come from the SVG, for
-example on Fedora with librsvg:
+The Start button (Kickoff launcher), the login and boot screens, `/etc/os-release` (`LOGO=`), the About page
+and the GitHub page. Sizes come from the SVG, for example on Fedora with librsvg:
 
 ```
 rsvg-convert -w 256 -h 256 branding/normie-logo.svg -o normie-logo-256.png
 ```
+
+## Changing it
+
+Edit the SVG, keep the N group (`<g fill="#ffffff">`) exactly as it is, run the tests
+(`python3 -m unittest discover -s tests`), and look at the result at 22, 48 and 256 px before committing.
