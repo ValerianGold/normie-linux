@@ -1,3 +1,5 @@
+<p align="center"><img src="branding/normie-logo.svg" width="160" alt="Normie Linux logo: a white letter N wrapped in flames"></p>
+
 # Normie Linux
 
 A beginner-friendly Linux distribution, based on Fedora, built so that ordinary
@@ -8,6 +10,8 @@ users never have to open a terminal.
 > to be replaced first ([docs/REBRANDING.md](docs/REBRANDING.md)). No snapshots or rollback yet, and the
 > tools themselves update only by reinstalling until our own package repository exists
 > ([docs/ROADMAP.md](docs/ROADMAP.md)). Not for anything important.
+>
+> What works, what is untested and what is missing: [docs/ALPHA-NOTES.md](docs/ALPHA-NOTES.md).
 
 ## Goals
 

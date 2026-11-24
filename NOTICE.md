@@ -19,6 +19,11 @@ the branding packages inherited from Fedora (`fedora-release*`,
 `fedora-logos`, and similar) must be replaced. This is tracked as Milestone 6
 in `docs/ROADMAP.md`. Publishing only this source repository is fine now.
 
+## The Normie Linux logo
+
+The logo in `branding/` (a white N with pixel flames on a dark badge) is original artwork made for this
+project. It contains no Fedora artwork. It is covered by the same license as the rest of the project.
+
 ## Third-party software
 
 Builds that include the NormieFull profile pull packages from RPM Fusion,

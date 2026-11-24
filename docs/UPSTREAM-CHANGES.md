@@ -10,6 +10,7 @@ Base commit: `daf359394913068f4fc18a8b7aafc404caeb8257` (2026-09-18, "Add graphi
 | `config.sh` | Added a block near the top that appends `KDE-Desktop-Live,KDE-Desktop` to `$kiwi_profiles` when the profile name contains `Normie` | `config.sh` picks the live session (KDE) and graphical boot target by matching substrings of profile names. Without this a Normie ISO could boot to a text console. Remove it once we have confirmed KIWI expands required profiles into that variable (see docs/START-HERE.md step 1) |
 | `scripts/fedora-live-iso-label-generator` | Added a block that gives `Normie-*` profiles short ISO labels | Without it the label repeats "Normie" and approaches the 32-character limit |
 | `README.md` | Moved to `docs/UPSTREAM-FEDORA-README.md`; new project README at the same path | Project identity |
+| `docs/UPSTREAM-FEDORA-README.md` | One link fixed: `VARIANTS.md` is now `../VARIANTS.md` | The file moved one folder down, so its link broke |
 | `.gitignore` | Appended build-output patterns | Keep ISOs and logs out of git |
 
 ## Added files
