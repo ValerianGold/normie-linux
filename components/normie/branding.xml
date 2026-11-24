@@ -8,6 +8,13 @@
   (Normie-Live requires KDE-Desktop and LiveInstall instead; see profiles.xml), and by excluding the
   Fedora-branded packages below so nothing pulls them back in.
 
+  Two Fedora-branded packages are NOT excluded, because Fedora's own packages require them and the
+  dependency check (tools/solve-check.py) refuses the image without them:
+    plasma-lookandfeel-fedora   plasma-workspace requires it at the exact same version. Our look-and-feel
+                                is the default (config.sh), so it is only an extra entry in the theme chooser.
+    libreport-fedora            abrt-desktop (crash reporting) requires it.
+  docs/REBRANDING.md lists them as the known leftovers; tools/audit-branding.py reports them for review.
+
   Deliberately KEPT, because they are Fedora's repositories and tools rather than branding:
   fedora-repos, fedora-gpg-keys, fedora-third-party, fedora-flathub-remote,
   fedora-workstation-repositories, fedora-appstream-metadata, NetworkManager-config-connectivity-fedora.
@@ -48,10 +55,8 @@
 		<ignore name="f45-backgrounds-base"/>
 		<ignore name="f45-backgrounds-kde"/>
 		<ignore name="desktop-backgrounds-kde"/>
-		<ignore name="plasma-lookandfeel-fedora"/>
 		<ignore name="plasma-welcome-fedora"/>
 		<ignore name="breeze-icon-theme-fedora"/>
 		<ignore name="fedora-bookmarks"/>
-		<ignore name="libreport-fedora"/>
 	</packages>
 </image>

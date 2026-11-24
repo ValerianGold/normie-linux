@@ -9,7 +9,7 @@ and decision D-17).
 | `normie-release/` | `normie-release` | `fedora-release-kde`, `fedora-release-common`, `fedora-release-identity-kde-desktop` |
 | `normie-logos/` | `normie-logos` | `fedora-logos` |
 | `normie-backgrounds-kde/` | `normie-backgrounds-kde` | `f45-backgrounds-*`, `desktop-backgrounds-kde` |
-| `normie-lookandfeel/` | `normie-lookandfeel` | `plasma-lookandfeel-fedora` |
+| `normie-lookandfeel/` | `normie-lookandfeel` | the default look of `plasma-lookandfeel-fedora` (that package stays installed: Plasma requires it) |
 
 Each folder holds the spec file and its sources. Binary packages only (no source RPMs yet).
 

@@ -13,7 +13,7 @@ legal list (R4) before any ISO is published (R5). Publishing this source reposit
 | `normie-release` | `packaging/normie-release/` | `/etc/os-release` (`NAME="Normie Linux"`, `ID=normie`, `ID_LIKE=fedora`), the version macros, dnf defaults, login banner. Forked from Fedora's `generic-release` 45 (MIT) |
 | `normie-logos` | `packaging/normie-logos/` | Our logo as the system icon and the Start button (`start-here`), the installer artwork and the boot-splash watermark |
 | `normie-backgrounds-kde` | `packaging/normie-backgrounds-kde/` | The default wallpaper (also `/usr/share/wallpapers/Default`) |
-| `normie-lookandfeel` | `packaging/normie-lookandfeel/` | The default Plasma look (dark Breeze, our wallpaper, our logo on the Start button) and **Update & Repair pinned in the Start menu** (D-12) |
+| `normie-lookandfeel` | `packaging/normie-lookandfeel/` | The default Plasma look (dark Breeze, our wallpaper, our logo on the Start button) and **Update & Repair pinned in the Start menu and on the taskbar** (D-12) |
 
 The four are built on the build host by `tools/build-rpms.sh` (needs `sudo dnf install rpm-build createrepo_c`
 once) into a local repository, `/var/lib/normie-linux/rpms`, which `repositories/normie-local.xml` gives to
@@ -29,9 +29,16 @@ files stay untouched: `Normie-Live` now requires `KDE-Desktop` and `LiveInstall`
 Kept on purpose, because they are Fedora's repositories and tools: `fedora-repos`, `fedora-gpg-keys`,
 `fedora-third-party`, `fedora-flathub-remote`, `fedora-workstation-repositories`, `fedora-appstream-metadata`,
 `NetworkManager-config-connectivity-fedora`, and the `%fedora` / `.fc45` macros and `ID_LIKE=fedora`.
-Two names we could not change because other software owns them: the installer's launcher icon is still called
-`org.fedoraproject.AnacondaInstaller` (we ship our logo under that name) and `normie-lookandfeel` also
-provides the capability name `plasma-lookandfeel-fedora` in case a package asks for it.
+One name we could not change because other software owns it: the installer's launcher icon is still called
+`org.fedoraproject.AnacondaInstaller` (we ship our logo under that name).
+
+**Known leftovers (found by the dependency check):** two Fedora-branded packages stay installed because Fedora's
+own packages require them. `plasma-lookandfeel-fedora`: `plasma-workspace` requires it at its exact version,
+so nothing of ours can stand in for it. Our look is the default, so it only adds "Fedora" entries to the theme
+chooser. `libreport-fedora`: `abrt-desktop` (crash reporting) requires it; it would send a user's crash
+report to Red Hat's Bugzilla only if the user chooses to report one. To remove them for good, either drop
+`abrt-desktop`, or rebuild the affected Fedora packages in our own repository (M3). Both are listed for review by
+`tools/audit-branding.py`.
 
 ## Known gaps to check on the first built ISO
 
@@ -40,8 +47,8 @@ provides the capability name `plasma-lookandfeel-fedora` in case a package asks 
 - Whether the KDE settings or any other package still hard-requires something we excluded
   (`tools/solve-check.py` reports that before the long build).
 - Whether `fedora-third-party` works when `ID` is not `fedora` (Update & Repair falls back to adding Flathub itself).
-- The Start menu pin is written as a plain setting; Plasma 6.8 keeps favorites in its activity database, so
-  confirm it appears on a fresh install.
+- The Start menu pin and the taskbar pin are written as plain settings by the look-and-feel's setup scripts; Plasma 6.8
+  keeps Start menu favorites in its activity database, so confirm both appear on a fresh install.
 - Text baked into the initial RAM disk (boot splash) and the GRUB menu title can only be seen by booting.
 
 ## What Fedora requires of a remix
@@ -92,11 +99,11 @@ rules; the open questions go to Fedora's legal list (stage R4).
 | Package | Why |
 |---|---|
 | `f45-backgrounds-base`, `f45-backgrounds-kde`, `desktop-backgrounds-kde` | Fedora's wallpapers |
-| `plasma-lookandfeel-fedora` | Default Plasma layout and look. **Our own version is where the Start menu pin goes** (D-12) |
+| `plasma-lookandfeel-fedora` | Default Plasma layout and look. Our own version is the default and holds the Start menu pin (D-12); this package itself must stay (see the leftovers above) |
 | `plasma-welcome-fedora` | The welcome app's Fedora text and pages |
 | `breeze-icon-theme-fedora` | Icon theme variant carrying Fedora's logo |
 | `fedora-bookmarks` | Firefox bookmarks and start page |
-| `libreport-fedora` | Sends users' crash reports to Red Hat's Bugzilla; must point at our own tracker instead |
+| `libreport-fedora` | Sends users' crash reports to Red Hat's Bugzilla if they choose to report; must point at our own tracker instead (kept for now, see the leftovers above) |
 
 **Keep** (they name Fedora because they ARE Fedora's repositories, keys and tools; this is the "based on
 Fedora" reference, not our branding): `fedora-repos`, `fedora-gpg-keys`, `fedora-third-party`,

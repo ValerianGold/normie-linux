@@ -1,5 +1,5 @@
 # Normie Linux's default Plasma look: dark Breeze, our wallpaper, our logo on the Start button, and
-# Update & Repair pinned in the Start menu. Based on the small, GPL-2.0-or-later look-and-feel package
+# Update & Repair pinned in the Start menu and on the taskbar. Based on the small, GPL-2.0-or-later look-and-feel package
 # that KDE distributions ship for this; contains no Fedora artwork.
 Name:           normie-lookandfeel
 Version:        0.1
@@ -8,7 +8,6 @@ Summary:        Normie Linux default Plasma look and feel
 License:        GPL-2.0-or-later
 BuildArch:      noarch
 
-Provides:       plasma-lookandfeel-fedora = %{version}-%{release}
 Requires:       plasma-workspace
 Requires:       normie-logos
 Requires:       normie-backgrounds-kde
@@ -27,7 +26,7 @@ install -d $L/contents/layouts $L/contents/plasmoidsetupscripts $L/contents/prev
 install -pm 0644 %{_sourcedir}/files/metadata.json $L/metadata.json
 install -pm 0644 %{_sourcedir}/files/contents/defaults $L/contents/defaults
 install -pm 0644 %{_sourcedir}/files/contents/layouts/org.kde.plasma.desktop-layout.js $L/contents/layouts/
-for s in kickoff kicker kickerdash; do
+for s in kickoff kicker kickerdash icontasks; do
     install -pm 0644 %{_sourcedir}/files/contents/plasmoidsetupscripts/org.kde.plasma.$s.js $L/contents/plasmoidsetupscripts/
 done
 install -pm 0644 %{_sourcedir}/files/previews/preview.png $L/contents/previews/preview.png

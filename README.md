@@ -47,7 +47,7 @@ tools/build.sh                      # builds the Normie-Live ISO (Milestone 1)
 | `repositories/rpmfusion.xml`, `normie-local.xml` | RPM Fusion and our own build-time package repository (ours). `core.xml` is Fedora's. |
 | `root/` | Files copied into the ISO as-is, including the Update & Repair tools (`root/usr/libexec/normie/`). |
 | `packaging/` | Our own packages: release files, logos, wallpaper, Plasma look. They replace Fedora's branding packages. |
-| `tools/` | `build.sh`, `build-rpms.sh`, `validate-kiwi.py`, `check-packages.py`, `solve-check.py`, `export-deps.py`, `audit-branding.py`. |
+| `tools/` | `build.sh`, `build-rpms.sh`, `validate-kiwi.py`, `check-packages.py`, `solve-check.py`, `export-deps.py`, `audit-branding.py`, `try-iso.sh`. |
 | `dist/` | `normie-deps.list`: the dependency list the Update & Repair button fetches from GitHub. |
 | `tests/` | Automated tests (simulated GPUs, fake commands). |
 | `docs/` | Start-here guide, roadmap, design decisions, how fixes roll out, rebranding plan, publishing steps. |

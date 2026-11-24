@@ -86,8 +86,8 @@ class ImageDescription(unittest.TestCase):
 
     def test_no_fedora_branded_package_is_installed(self):
         banned = re.compile(r"^(fedora-release.*|fedora-logos.*|generic-(release|logos).*|f\d+-backgrounds.*|"
-                            r"desktop-backgrounds-kde|plasma-lookandfeel-fedora|plasma-welcome-fedora|"
-                            r"breeze-icon-theme-fedora|fedora-bookmarks|libreport-fedora)$")
+                            r"desktop-backgrounds-kde|plasma-welcome-fedora|"
+                            r"breeze-icon-theme-fedora|fedora-bookmarks)$")
         for profile in ("Normie-Live", "Normie-Full-Live"):
             named, _, _, _ = packages_for(profile)
             self.assertEqual([n for n in named if banned.match(n)], [], profile)
@@ -95,9 +95,16 @@ class ImageDescription(unittest.TestCase):
     def test_fedoras_branded_packages_are_excluded_so_nothing_pulls_them_back_in(self):
         _, ignored, _, _ = packages_for("Normie-Live")
         for n in ("fedora-release-kde", "fedora-release-common", "fedora-release-identity-kde-desktop", "fedora-logos",
-                  "f45-backgrounds-base", "f45-backgrounds-kde", "desktop-backgrounds-kde", "plasma-lookandfeel-fedora",
-                  "plasma-welcome-fedora", "breeze-icon-theme-fedora", "fedora-bookmarks", "libreport-fedora"):
+                  "f45-backgrounds-base", "f45-backgrounds-kde", "desktop-backgrounds-kde",
+                  "plasma-welcome-fedora", "breeze-icon-theme-fedora", "fedora-bookmarks"):
             self.assertIn(n, ignored)
+
+    def test_the_two_packages_fedora_itself_requires_are_not_excluded(self):
+        # plasma-workspace needs plasma-lookandfeel-fedora at its exact version, and abrt-desktop needs
+        # libreport-fedora; excluding them makes the whole image unresolvable (found by solve-check)
+        _, ignored, _, _ = packages_for("Normie-Live")
+        self.assertNotIn("plasma-lookandfeel-fedora", ignored)
+        self.assertNotIn("libreport-fedora", ignored)
 
     def test_fedoras_repositories_and_tools_are_never_excluded(self):
         _, ignored, _, _ = packages_for("Normie-Full-Live")
@@ -429,11 +436,12 @@ class AuditBranding(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertIn("default look-and-feel is still org.fedoraproject.fedoradark.desktop", out)
 
-    def test_fedoras_look_and_feel_pack_installed_fails(self):
+    def test_fedoras_look_and_feel_pack_being_installed_is_only_a_review_item(self):
+        # plasma-workspace requires that package, so it is there; what matters is that it is not the default
         make_image(self.root, extra={"usr/share/plasma/look-and-feel/org.fedoraproject.fedora.desktop/metadata.json": "{}"})
         rc, out = self.run_audit("--root", self.root)
-        self.assertEqual(rc, 1)
-        self.assertIn("Fedora's look-and-feel pack is installed", out)
+        self.assertEqual(rc, 0, out)
+        self.assertIn("REVIEW  Fedora's look-and-feel pack is installed", out)
 
     def test_our_look_and_feel_pack_missing_fails(self):
         make_image(self.root)
@@ -480,6 +488,78 @@ class AuditBranding(unittest.TestCase):
         ids = mod.read_iso_ids(self.iso)
         self.assertEqual(ids["volume id"], "Normie-Linux-Full-Live-45")
         self.assertEqual(ids["publisher"], "Normie Linux contributors")
+
+
+class TryIso(unittest.TestCase):
+    """tools/try-iso.sh with a fake qemu and fake firmware files."""
+
+    def setUp(self):
+        self.d = tmpdir()
+        os.makedirs(self.d + "/bin")
+        write(self.d + "/bin/qemu-system-x86_64", '#!/bin/bash\necho "QEMU $*" >> "$FAKE_LOG"\n', 0o755)
+        write(self.d + "/bin/qemu-img", '#!/bin/bash\necho "IMG $*" >> "$FAKE_LOG"\n: > "${@: -2:1}"\n', 0o755)
+        write(self.d + "/code.fd", "code")
+        write(self.d + "/vars.fd", "vars")
+        self.out = self.d + "/out"
+        os.makedirs(self.out + "/Normie-Full-Live-build")
+        write(self.out + "/Normie-Full-Live-build/Normie-Linux.iso", "iso")
+        self.log = self.d + "/log"
+        write(self.log, "")
+        self.env = dict(os.environ, PATH=self.d + "/bin:" + os.environ["PATH"], NORMIE_OUT=self.out, FAKE_LOG=self.log,
+                        NORMIE_OVMF_CODE=self.d + "/code.fd", NORMIE_OVMF_VARS=self.d + "/vars.fd")
+
+    def run_script(self, *args):
+        r = subprocess.run(["bash", os.path.join(ROOT, "tools", "try-iso.sh"), *args], env=self.env, capture_output=True, text=True)
+        return r.returncode, r.stdout + r.stderr
+
+    def test_it_boots_the_newest_iso_with_uefi_and_a_fresh_disk(self):
+        rc, out = self.run_script()
+        self.assertEqual(rc, 0, out)
+        log = read_file(self.log)
+        self.assertIn("IMG create -q -f qcow2", log)
+        self.assertIn("QEMU", log)
+        self.assertIn("Normie-Linux.iso", log)
+        self.assertIn("if=pflash", log)
+        self.assertIn("bootindex=0", log)
+        self.assertTrue(os.path.exists(self.out + "/vm/OVMF_VARS.fd"))
+
+    def test_installed_mode_boots_the_disk_without_the_iso(self):
+        self.run_script()
+        open(self.log, "w").close()
+        rc, out = self.run_script("--installed")
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn(".iso", read_file(self.log))
+        self.assertNotIn("media=cdrom", read_file(self.log))
+
+    def test_installed_mode_without_a_disk_is_explained(self):
+        rc, out = self.run_script("--installed")
+        self.assertEqual(rc, 1)
+        self.assertIn("no installed virtual disk", out)
+
+    def test_fresh_throws_the_old_disk_away(self):
+        self.run_script()
+        write(self.out + "/vm/normie-test.qcow2", "old installation")
+        open(self.log, "w").close()
+        self.run_script("--fresh")
+        self.assertIn("IMG create", read_file(self.log))
+
+    def test_missing_tools_are_explained_with_the_install_command(self):
+        env = dict(self.env, PATH="/nonexistent-bin", NORMIE_OVMF_CODE="/none", NORMIE_OVMF_VARS="/none")
+        r = subprocess.run([shutil.which("bash"), os.path.join(ROOT, "tools", "try-iso.sh")], env=env, capture_output=True, text=True)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("sudo dnf install qemu-system-x86 edk2-ovmf", r.stderr)
+
+    def test_no_iso_built_yet_is_explained(self):
+        os.remove(self.out + "/Normie-Full-Live-build/Normie-Linux.iso")
+        rc, out = self.run_script()
+        self.assertEqual(rc, 1)
+        self.assertIn("no ISO found", out)
+
+    def test_print_shows_the_command_and_starts_nothing(self):
+        rc, out = self.run_script("--print")
+        self.assertEqual(rc, 0, out)
+        self.assertIn("qemu-system-x86_64", out)
+        self.assertEqual(read_file(self.log), "")
 
 
 if __name__ == "__main__":

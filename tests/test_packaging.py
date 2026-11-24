@@ -432,7 +432,8 @@ class ArtworkPackages(unittest.TestCase):
                   "plasmoidsetupscripts/org.kde.plasma.kicker.js", "plasmoidsetupscripts/org.kde.plasma.kickerdash.js",
                   "previews/preview.png"):
             self.assertTrue(os.path.exists(f"{pack}/contents/{f}"), f)
-        self.assertIn("plasma-lookandfeel-fedora", " ".join(spec.tag("Provides")))      # for packages that still ask for it
+        # a fixed Provides cannot satisfy plasma-workspace's exact-version requirement, so we do not pretend to
+        self.assertNotIn("plasma-lookandfeel-fedora", " ".join(spec.tag("Provides")))
 
     def test_the_wallpaper_the_look_and_feel_names_is_the_one_we_ship(self):
         _, root, _, _ = self.built["normie-backgrounds-kde"]
@@ -446,6 +447,12 @@ class ArtworkPackages(unittest.TestCase):
         self.assertIn('writeConfig("icon", "start-here")', js)
         self.assertIn("normie-update.desktop", js)
         self.assertTrue(os.path.exists(os.path.join(ROOT, "root", "usr", "share", "applications", "normie-update.desktop")))
+
+    def test_update_and_repair_is_also_pinned_on_the_taskbar(self):
+        _, lroot, _, _ = self.built["normie-lookandfeel"]
+        js = read(lroot, "usr/share/plasma/look-and-feel/org.normielinux.normie.desktop/contents/plasmoidsetupscripts/org.kde.plasma.icontasks.js")
+        self.assertIn('"applications:normie-update.desktop"', js)
+        self.assertIn('writeConfig("launchers"', js)
 
     @unittest.skipUnless(shutil.which("node"), "node is not installed")
     def test_the_plasma_scripts_are_valid_javascript(self):

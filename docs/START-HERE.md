@@ -17,6 +17,19 @@ After that `tools/update-iso.sh` and `tools/build.sh` build the packages by them
 To do it by hand: `tools/build-rpms.sh`. After a build, `python3 tools/audit-branding.py` lists anything
 that still mentions Fedora (see `REBRANDING.md`).
 
+## Looking at a new ISO in a virtual machine
+
+```
+sudo dnf install qemu-system-x86 edk2-ovmf     # once
+tools/try-iso.sh                                # boots the newest ISO; you can try it live or install onto a virtual 40 GB disk
+tools/try-iso.sh --installed                    # afterwards: boot what you installed, without the ISO
+tools/try-iso.sh --fresh                        # start over with an empty disk
+```
+
+Nothing touches your real disks. Things to look at: the boot menu, the login screen, the desktop and wallpaper,
+the Start button, the pins (Start menu and taskbar), Settings > About, the installer. Then run
+`python3 tools/audit-branding.py`.
+
 ## The one thing to remember: a patch changes the recipe, not the ISO
 
 ```

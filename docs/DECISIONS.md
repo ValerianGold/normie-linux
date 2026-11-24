@@ -84,9 +84,9 @@ overwrite. Agreed alternative: pin it in the Start menu's favorites, plus a remi
   re-adding defaults after removal, and other projects need to edit the database before Plasma starts. A script
   poking that at runtime would be version-specific and could silently do nothing.
   Decision: do NOT hack it in at runtime. The correct, upgrade-safe place is the distribution's own default
-  Plasma layout, which ships in a look-and-feel package. We have to replace Fedora's `plasma-lookandfeel-fedora`
+  Plasma layout, which ships in a look-and-feel package. We replace Fedora's `plasma-lookandfeel-fedora` as the default
   anyway for the rebrand (M6), so the pin is added there. **Done** in `packaging/normie-lookandfeel` (its
-  Kickoff setup script writes the pinned list). It is written as a plain setting that Kickoff imports on first
+  Kickoff setup script writes the pinned list, and its taskbar script pins it there too). It is written as a plain setting that Kickoff imports on first
   start; confirm on a fresh install that it appears. If it does not, the app is still in the menu under System and
   on the desktop, and the reminder keeps it from being forgotten.
 

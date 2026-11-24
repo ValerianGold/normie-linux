@@ -95,8 +95,8 @@ for prof in want:
 # ---- Normie branding: the image must not name Fedora's identity packages, and must name ours.
 # (components/normie/branding.xml lists them as <ignore>, which is allowed.)
 BRANDED = re.compile(r"^(fedora-release(-.*)?|fedora-logos(-.*)?|generic-(release|logos)(-.*)?|f\d+-backgrounds(-.*)?|"
-                     r"desktop-backgrounds-kde|plasma-lookandfeel-fedora|plasma-welcome-fedora|"
-                     r"breeze-icon-theme-fedora|fedora-bookmarks|libreport-fedora)$")
+                     r"desktop-backgrounds-kde|plasma-welcome-fedora|"
+                     r"breeze-icon-theme-fedora|fedora-bookmarks)$")
 OURS = ("normie-release", "normie-logos", "normie-backgrounds-kde", "normie-lookandfeel")
 if kiwi == "Normie-Linux.kiwi":
     for prof in want:
