@@ -159,6 +159,16 @@ ISO it replaces is kept in `~/normie-linux-out/isos/`, so nothing is ever lost.
 If it stops, send me the message it printed (and `~/normie-linux-out/preflight.txt` if it names that file).
 To see what changed in a patch first: `git apply --stat ~/Downloads/0010-*.patch`.
 
+## If something goes wrong
+
+| What you see | What it means | What to do |
+|---|---|---|
+| `previous rebase directory .git/rebase-apply still exists but mbox given` | An earlier patch attempt was left half-finished; git refuses to start another | `tools/update-iso.sh` clears it for you. By hand: `cd ~/normie-linux && git am --abort` |
+| `already exists in index` (many files) while applying a patch | That patch is already applied | Nothing is wrong. `tools/update-iso.sh` skips it by itself. By hand: `git am --abort` |
+| `KiwiRootDirExists: Root directory ... already exists` | kiwi will not build over an earlier build | `tools/build.sh` (and so `tools/update-iso.sh`) keeps the old ISO and clears the folder first |
+| `fatal: not a git repository` | You ran a command outside the project folder | `cd ~/normie-linux` first, or use `~/normie-linux/tools/update-iso.sh`, which works from anywhere |
+| A check stops with `STOPPED:` | The script found a real problem and did not build | Send me the message it printed |
+
 ## Run the tests
 
 ```

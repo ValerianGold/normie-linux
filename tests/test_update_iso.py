@@ -188,6 +188,63 @@ class UpdateIso(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertTrue(os.path.exists(f"{self.repo}/feature.txt"))
 
+    # ---- a half-finished earlier 'git am' (the "previous rebase directory still exists" error)
+    def leave_a_stuck_am_session(self):
+        write(f"{self.repo}/f.txt", "base\n")
+        self.git("add", "-A"); self.git("commit", "-q", "-m", "add f")
+        write(f"{self.repo}/f.txt", "change A\n")
+        self.git("add", "-A"); self.git("commit", "-q", "-m", "Change f to A")
+        conflicting = f"{os.path.dirname(self.repo)}/conflicting.patch"
+        write(conflicting, self.git("format-patch", "-1", "--stdout").stdout)
+        self.git("reset", "-q", "--hard", "HEAD~1")
+        write(f"{self.repo}/f.txt", "change B\n")
+        self.git("add", "-A"); self.git("commit", "-q", "-m", "Change f to B")
+        self.git("am", conflicting)                                   # fails and leaves the session open
+        self.assertTrue(os.path.isdir(f"{self.repo}/.git/rebase-apply"))
+
+    def test_a_stuck_earlier_patch_attempt_is_cleared_automatically(self):
+        good = self.make_patch("A fresh feature", "fresh.txt")
+        self.leave_a_stuck_am_session()
+        rc, out = self.run_script(good)
+        self.assertEqual(rc, 0, out)
+        self.assertIn("half-finished earlier patch attempt", out)
+        self.assertFalse(os.path.exists(f"{self.repo}/.git/rebase-apply"))
+        self.assertTrue(os.path.exists(f"{self.repo}/fresh.txt"))
+        self.assertIn("build.sh Normie-Full-Live", self.calls())
+
+    def test_a_stuck_session_is_cleared_even_when_no_patch_is_given(self):
+        self.leave_a_stuck_am_session()
+        rc, out = self.run_script()
+        self.assertEqual(rc, 0, out)
+        self.assertFalse(os.path.exists(f"{self.repo}/.git/rebase-apply"))
+
+    def test_some_other_git_operation_in_progress_is_not_touched(self):
+        os.makedirs(f"{self.repo}/.git/rebase-apply")                 # a rebase has this folder but no 'applying' file
+        rc, out = self.run_script()
+        self.assertEqual(rc, 1)
+        self.assertIn("middle of something else", out)
+        self.assertTrue(os.path.isdir(f"{self.repo}/.git/rebase-apply"))
+        self.assertEqual(self.calls(), [])
+
+    def test_a_patch_that_changes_the_script_itself_does_not_break_the_run(self):
+        # patches can edit tools/update-iso.sh while it is running; reading it all first keeps that safe
+        script = self.tools("update-iso.sh")
+        with open(script, "a") as fh:
+            fh.write("# touched by a patch\n")
+        self.git("add", "-A"); self.git("commit", "-q", "-m", "Edit the update script itself")
+        patch = f"{os.path.dirname(self.repo)}/selfedit.patch"
+        write(patch, self.git("format-patch", "-1", "--stdout").stdout)
+        self.git("reset", "-q", "--hard", "HEAD~1")
+        rc, out = self.run_script(patch)
+        self.assertEqual(rc, 0, out)
+        self.assertIn("# touched by a patch", read(script))
+        self.assertIn("All done", out)
+        self.assertIn("build.sh Normie-Full-Live", self.calls())
+
+    def test_the_whole_script_is_read_before_anything_runs(self):
+        text = read(os.path.join(ROOT, "tools", "update-iso.sh"))
+        self.assertTrue(text.rstrip().endswith('main "$@"\nexit $?'))
+
 
 if __name__ == "__main__":
     unittest.main()
