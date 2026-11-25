@@ -15,7 +15,7 @@
 <image schemaversion="7.4" name="Normie-Linux">
 	<description type="system">
 		<author>Normie Linux contributors</author>
-		<contact>TODO-set-project-contact-before-publishing</contact>
+		<contact>https://github.com/ValerianGold/normie-linux</contact>
 		<specification>Normie Linux, a beginner-friendly distribution based on Fedora Linux</specification>
 	</description>
 	<preferences>
