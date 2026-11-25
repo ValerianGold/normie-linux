@@ -8,6 +8,7 @@ Catches the mistakes that otherwise surface 30 minutes into a build:
   - the same profile defined twice
   - an ISO volume label longer than 32 characters
   - (Normie profiles) a Fedora-branded package named in the image, or our release package missing
+  - (Normie profiles) a package that is both requested and <ignore>d, which dnf refuses
 
 Usage (from the repo root):
   python3 tools/validate-kiwi.py                       # checks Normie-Linux.kiwi
@@ -103,7 +104,7 @@ if kiwi == "Normie-Linux.kiwi":
         if prof not in defined:
             continue
         active = closure(prof)
-        named, boot = set(), set()
+        named, boot, wanted, ignored = set(), set(), set(), set()
         for f in files:
             try:
                 r = ET.parse(f).getroot()
@@ -115,8 +116,15 @@ if kiwi == "Normie-Linux.kiwi":
                     continue
                 for pk in grp.findall("package"):
                     named.add(pk.get("name"))
+                    if grp.get("type") in ("image", "bootstrap"):
+                        wanted.add(pk.get("name"))
                     if grp.get("type") == "bootstrap":
                         boot.add(pk.get("name"))
+                if grp.get("type") in ("image", "bootstrap"):
+                    ignored.update(ig.get("name") for ig in grp.findall("ignore"))
+        for n in sorted(wanted & ignored):
+            problems.append(f"{prof}: '{n}' is listed as a package to install AND as <ignore>; dnf stops with "
+                            "\"matches only excluded packages\" (remove it with an <packages type=\"uninstall\"> block instead)")
         for n in sorted(x for x in named if x and BRANDED.match(x)):
             problems.append(f"{prof} installs '{n}', which carries Fedora's branding")
         for n in OURS:

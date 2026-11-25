@@ -113,13 +113,19 @@ shutil.rmtree(tmp, ignore_errors=True)
 with open("solve-check.log", "w") as fh:
     fh.write(out)
 
-problem = re.search(r"Problem|Failed to resolve|cannot install both|conflicts with|nothing provides|No match for argument", out)
+problem = re.search(r"Problem|Failed to resolve|cannot install both|conflicts with|nothing provides|No match for argument|only excluded", out)
 summary = "Transaction Summary" in out
 if problem:
     print("PROBLEMS FOUND. The relevant lines:\n")
     keep = [l for l in out.splitlines()
-            if re.search(r"Problem|cannot install|conflicts|nothing provides|No match|requires|package .* from", l)]
+            if re.search(r"Problem|cannot install|conflicts|nothing provides|No match|requires|package .* from|"
+                         r"Failed to resolve|only excluded|Argument|rror", l)]
+    if not keep:                                  # never print an empty list: show the end of dnf's own output
+        keep = out.splitlines()[-25:]
     print("\n".join(keep[:60]))
+    if "only excluded" in out:
+        print("\nA package that the image asks for by name is also excluded (<ignore>). dnf refuses that.")
+        print("Either stop excluding it, or remove it afterwards with a <packages type=\"uninstall\"> block.")
     only_missing = all(l.startswith("No match for argument") for l in keep) and keep
     if only_missing:
         print("\nThese are all MISSING package names. DNF stops at those before it can look for")

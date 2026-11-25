@@ -296,8 +296,33 @@ class LeftoverPathsBlock(unittest.TestCase):
         self.assertIn("/usr/share/wallpapers/Fedora/", read_file(d + "/usr/share/kde-settings/kde-profile/default/xdg/kscreenlockerrc"))
         self.assertIn("start-here-kde-fedora", read_file(d + "/usr/share/plasma/shells/org.kde.plasma.desktop/contents/updates/00-start-here-2.js"))
 
-    def test_fedora_media_writer_is_left_out_of_the_image(self):
-        self.assertIn('<ignore name="mediawriter"/>', read("components/normie/branding.xml"))
+    def test_fedora_media_writer_is_removed_after_installing_not_ignored(self):
+        text = read("components/normie/branding.xml")
+        self.assertNotIn('<ignore name="mediawriter"/>', text)      # dnf refuses to install and exclude the same package
+        self.assertRegex(text, r'<packages type="uninstall" profiles="Normie-Live">\s*<package name="mediawriter"/>')
+
+    def test_validate_kiwi_catches_a_package_that_is_both_requested_and_ignored(self):
+        d = tmpdir()
+        shutil.copytree(ROOT, d + "/r", symlinks=True, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+        path = d + "/r/components/normie/branding.xml"
+        write(path, read("components", "normie", "branding.xml").replace(
+            '<ignore name="fedora-bookmarks"/>', '<ignore name="fedora-bookmarks"/><ignore name="mediawriter"/>'))
+        r = subprocess.run([sys.executable, "tools/validate-kiwi.py"], cwd=d + "/r", capture_output=True, text=True)
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertIn("'mediawriter' is listed as a package to install AND as <ignore>", r.stdout)
+
+    @unittest.skipIf(os.geteuid() != 0, "solve-check.py insists on root")
+    def test_solve_check_shows_dnfs_message_even_when_it_matches_no_known_pattern(self):
+        d = tmpdir()
+        shutil.copytree(ROOT, d + "/r", symlinks=True, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+        write(d + "/bin/dnf5", "#!/bin/bash\necho \"Failed to resolve the transaction:\"\n"
+                               "echo \"Argument 'mediawriter' matches only excluded packages.\"\nexit 1\n", 0o755)
+        env = dict(os.environ, PATH=d + "/bin:" + os.environ["PATH"])
+        r = subprocess.run([sys.executable, "tools/solve-check.py", "KDE-Desktop-Live"], cwd=d + "/r", env=env,
+                           capture_output=True, text=True)
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn("matches only excluded packages", r.stdout)
+        self.assertIn("also excluded", r.stdout)
 
 
 class BuildRpmsScript(unittest.TestCase):
