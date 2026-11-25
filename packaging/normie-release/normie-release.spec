@@ -9,7 +9,7 @@
 
 Name:           normie-release
 Version:        %{dist_version}
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Normie Linux release files
 License:        MIT
 BuildArch:      noarch
@@ -18,6 +18,9 @@ Source0:        normie-release-sources.tar.gz
 
 Provides:       system-release = %{version}-%{release}
 Provides:       system-release(%{version})
+# dnf works out $releasever (the 45 in every repository address) from this exact name. Without it dnf falls back to
+# the version AND release of system-release, "45-1.fc45", and every repository address 404s.
+Provides:       system-release(releasever) = %{dist_version}
 Provides:       normie-release-identity = %{version}-%{release}
 
 # Only one release package may be installed. These are Fedora's (and the generic remix) ones.
@@ -108,5 +111,9 @@ install -pm 0644 LICENSE licenses/LICENSE
 %config(noreplace) %{_sysconfdir}/yum.repos.d/normie.repo
 
 %changelog
+* Wed Nov 25 2026 Normie Linux contributors <noreply@invalid> - 45-2
+- Provide system-release(releasever) = 45, so that dnf's $releasever is 45 and not 45-1.fc45 (every Fedora,
+  RPM Fusion and Copr repository address failed with 404 without it).
+
 * Tue Nov 24 2026 Normie Linux contributors <noreply@invalid> - 45-1
 - First release package. Forked from generic-release 45-0.4 (MIT), plus the KDE edition's protected package.

@@ -343,6 +343,14 @@ class ReleasePackage(unittest.TestCase):
             self.assertTrue(os.path.exists(os.path.join(self.root, "etc", name)), name)
         self.assertIn("Normie Linux release 45", read(self.root, "etc/system-release"))
 
+    def test_dnf_gets_releasever_from_the_exact_provide_it_looks_for(self):
+        # Without "system-release(releasever) = 45", dnf falls back to the version-release of "system-release"
+        # and uses "45-1.fc45" as $releasever: every Fedora, RPM Fusion and Copr address then returns 404.
+        provides = self.spec.tag("Provides")
+        self.assertIn("system-release(releasever) = 45", provides)       # the tags are already expanded
+        # ...and 45 must be the version the system says it is
+        self.assertEqual(self.osrel()["VERSION_ID"], "45")
+
     def test_it_replaces_fedoras_release_packages_and_keeps_fedoras_repositories(self):
         s = self.spec
         for needed in ("system-release", "system-release(45)"):
