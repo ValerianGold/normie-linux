@@ -311,15 +311,31 @@ class LeftoverPathsBlock(unittest.TestCase):
         self.assertEqual(r.returncode, 1, r.stdout)
         self.assertIn("'mediawriter' is listed as a package to install AND as <ignore>", r.stdout)
 
-    @unittest.skipIf(os.geteuid() != 0, "solve-check.py insists on root")
-    def test_solve_check_shows_dnfs_message_even_when_it_matches_no_known_pattern(self):
+    def run_solve_check_with_dnf_saying(self, script):
         d = tmpdir()
         shutil.copytree(ROOT, d + "/r", symlinks=True, ignore=shutil.ignore_patterns(".git", "__pycache__"))
-        write(d + "/bin/dnf5", "#!/bin/bash\necho \"Failed to resolve the transaction:\"\n"
-                               "echo \"Argument 'mediawriter' matches only excluded packages.\"\nexit 1\n", 0o755)
+        write(d + "/bin/dnf5", "#!/bin/bash\n" + script, 0o755)
         env = dict(os.environ, PATH=d + "/bin:" + os.environ["PATH"])
-        r = subprocess.run([sys.executable, "tools/solve-check.py", "KDE-Desktop-Live"], cwd=d + "/r", env=env,
-                           capture_output=True, text=True)
+        return subprocess.run([sys.executable, "tools/solve-check.py", "KDE-Desktop-Live"], cwd=d + "/r", env=env,
+                              capture_output=True, text=True)
+
+    @unittest.skipIf(os.geteuid() != 0, "solve-check.py insists on root")
+    def test_solve_check_treats_only_excluded_as_a_notice_when_dnf_resolves(self):
+        r = self.run_solve_check_with_dnf_saying(
+            "echo \"Argument 'krusader' matches only excluded packages.\"\n"
+            "echo \"Argument 'k3b' matches only excluded packages.\"\n"
+            "echo 'libgpg-error  i686  1.61-2.fc45  fedora  944 KiB'\n"
+            "echo 'Transaction Summary:'\necho ' Installing: 1000 packages'\nexit 1\n")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("OK: DNF can resolve", r.stdout)
+        self.assertIn("krusader, k3b", r.stdout)
+        self.assertNotIn("PROBLEMS", r.stdout)
+
+    @unittest.skipIf(os.geteuid() != 0, "solve-check.py insists on root")
+    def test_solve_check_shows_dnfs_message_even_when_it_matches_no_known_pattern(self):
+        r = self.run_solve_check_with_dnf_saying(
+            "echo \"Failed to resolve the transaction:\"\n"
+            "echo \"Argument 'mediawriter' matches only excluded packages.\"\nexit 1\n")
         self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
         self.assertIn("matches only excluded packages", r.stdout)
         self.assertIn("also excluded", r.stdout)
@@ -637,6 +653,18 @@ class AuditBranding(unittest.TestCase):
         self.assertNotIn("contents/defaults", reviewed)
         self.assertNotIn("normie-kde.conf", reviewed)                           # it says "Fedora" in a comment
         self.assertIn("note    1 files: Fedora's own look-and-feel packs", out)
+
+    def test_packages_from_rpm_fusion_are_listed_for_review(self):
+        make_image(self.root)
+        bin_dir = self.d + "/bin"
+        write(bin_dir + "/rpm", "#!/bin/bash\ncase \"$*\" in\n*VENDOR*) printf 'x264-libs\\tRPM Fusion\\nbash\\tFedora Project\\n';;\n"
+              "*) printf 'x264-libs\\nbash\\nnormie-release\\nnormie-logos\\nnormie-backgrounds-kde\\nnormie-lookandfeel\\n';;\nesac\n", 0o755)
+        r = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "audit-branding.py"), "--root", self.root],
+                           capture_output=True, text=True, env=dict(os.environ, NORMIE_OUT=tmpdir(), PATH=bin_dir + ":" + os.environ["PATH"]))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("REVIEW  1 packages come from RPM Fusion, not Fedora", r.stdout)
+        self.assertIn("x264-libs", r.stdout)
+        self.assertNotIn("bash", "".join(l for l in r.stdout.splitlines() if "RPM Fusion" in l))
 
     def test_fedoras_publisher_on_the_iso_fails(self):
         make_iso(self.iso, publisher="Fedora Project")

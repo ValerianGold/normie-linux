@@ -113,13 +113,17 @@ shutil.rmtree(tmp, ignore_errors=True)
 with open("solve-check.log", "w") as fh:
     fh.write(out)
 
-problem = re.search(r"Problem|Failed to resolve|cannot install both|conflicts with|nothing provides|No match for argument|only excluded", out)
+# "Argument 'x' matches only excluded packages" is only a notice: Fedora's own recipes exclude packages that
+# groups would otherwise bring in (krusader, k3b, ...), and dnf still resolves everything else. It is a failure
+# only when dnf also says it could not resolve the transaction.
+problem = re.search(r"Problem|Failed to resolve|cannot install both|conflicts with|nothing provides|No match for argument", out)
+notices = [l.strip() for l in out.splitlines() if "matches only excluded packages" in l]
 summary = "Transaction Summary" in out
 if problem:
     print("PROBLEMS FOUND. The relevant lines:\n")
     keep = [l for l in out.splitlines()
             if re.search(r"Problem|cannot install|conflicts|nothing provides|No match|requires|package .* from|"
-                         r"Failed to resolve|only excluded|Argument|rror", l)]
+                         r"Failed to resolve|only excluded|^Error|Error:", l)]
     if not keep:                                  # never print an empty list: show the end of dnf's own output
         keep = out.splitlines()[-25:]
     print("\n".join(keep[:60]))
@@ -136,6 +140,9 @@ if problem:
 if summary:
     m = re.search(r"Installing:?\s+(\d+)\s+packages?", out)
     print("OK: DNF can resolve the whole set with no conflicts.")
+    if notices:
+        print(f"    ({len(notices)} packages are both asked for and excluded; dnf only notes that: "
+              + ", ".join(n.split("'")[1] for n in notices if "'" in n) + ")")
     if m:
         print(f"    ({m.group(1)} top-level installs; full detail in solve-check.log)")
     sys.exit(0)

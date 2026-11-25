@@ -45,6 +45,15 @@ copy of the ISO and its checksum yourself. Many people use two places so one goi
   The current Full profile uses RPM Fusion's **free** repository only (non-free is commented out in
   `repositories/rpmfusion.xml`). If you ever turn non-free on, check each package's licence before putting it
   in a public ISO. Not legal advice: the legal list is the place to ask.
+- **Patents (a separate question from Fedora's trademarks).** The Full ISO currently contains about 15 packages
+  from RPM Fusion Free: video and audio codecs such as x264, x265, libde265, vvenc, aptX and the "freeworld"
+  GStreamer, FFmpeg and VA-API pieces. Their licences are free, but Fedora does not ship them because of
+  software patents (H.264, HEVC and similar), and removing Fedora's name does not change that. Whether it matters
+  depends on where you publish from and who downloads; patent pools in practice pursue commercial distributors,
+  and some other Fedora-based distributions do ship these. It is still your decision to make on purpose.
+  The safe route is an ISO **without** them, with Update & Repair offering to install them afterwards from
+  RPM Fusion onto the user's own computer, so you never distribute them. `tools/audit-branding.py` lists
+  them. Not legal advice.
 - A **fresh VM install** works from the very ISO you upload, not just a previous build.
 
 ## Step by step (when the checks above are done)

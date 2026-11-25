@@ -160,6 +160,20 @@ def audit_packages(root, rep):
         rep.ok(f"no Fedora identity packages among {len(pkgs)} installed packages")
 
 
+def audit_rpm_fusion(root, rep):
+    """Packages from RPM Fusion Free are software Fedora does not ship (mostly patent-encumbered video codecs)."""
+    try:
+        out = subprocess.run(["rpm", "--root", root, "-qa", "--qf", "%{NAME}\t%{VENDOR}\n"],
+                             capture_output=True, text=True, check=True)
+    except (OSError, subprocess.CalledProcessError):
+        return
+    names = sorted({line.split("\t")[0] for line in out.stdout.splitlines()
+                    if "\t" in line and "rpm fusion" in line.split("\t", 1)[1].lower()})
+    if names:
+        rep.review(f"{len(names)} packages come from RPM Fusion, not Fedora (codecs Fedora does not ship because of patents; "
+                   "decide on purpose, see docs/DISTRIBUTING-THE-ISO.md): " + ", ".join(names))
+
+
 def walk_places(root):
     for place in PLACES:
         base = os.path.join(root, place)
@@ -391,6 +405,7 @@ def main(argv):
             return 2
         audit_os_release(root, rep)
         audit_packages(root, rep)
+        audit_rpm_fusion(root, rep)
         audit_look_and_feel(root, rep)
         audit_installer_profile(root, rep)
         audit_files(root, rep)
