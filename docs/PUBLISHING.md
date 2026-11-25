@@ -1,7 +1,7 @@
 # Publishing on GitHub
 
-What you may publish **now**: this source repository. What waits: ISO files (Fedora branding must be
-replaced first, `REBRANDING.md`).
+You publish two things: this source repository on GitHub, and the ISO on SourceForge and the Internet Archive
+(`DISTRIBUTING-THE-ISO.md`).
 
 ## Where to type the commands
 
@@ -44,36 +44,31 @@ in a browser. You should see the package list. If you do, installed systems will
 - The commits carry a placeholder author name from the first import. That is harmless. Your own commits
   use your Git identity (`git config --global user.name` / `user.email`).
 
-## Make the alpha release (source only)
+## Make the alpha release
 
-Do this once the first push is done and the **tests workflow is green** on GitHub.
+Do this once the first push is done and the **tests workflow shows a green check** on GitHub.
 
-1. Check the two addresses were set (both lines must show your username, not an empty value or `TODO`):
+The release is made after the ISO is uploaded, because its notes carry the download links and the checksum.
+The exact steps (checksums, SourceForge, Internet Archive, tagging the commit the ISO was built from, creating the
+release with `gh release create --prerelease`) are in `DISTRIBUTING-THE-ISO.md`, "Step by step".
+**Do not attach an ISO to the release:** GitHub allows about 2 GB per file and the full ISO is larger.
+Attach only small files (the checksum, the package list, `BUILD-INFO.txt`).
 
-   ```
-   cd ~/normie-linux
-   grep '^DEPS_LIST_URL=' root/etc/normie/update.conf
-   grep '<contact>' Normie-Linux.kiwi
-   ```
+First check the two addresses were set (both lines must show your username, not an empty value or `TODO`):
 
-2. Tag it and create the release. `--prerelease` marks it as an alpha on GitHub:
+```
+cd ~/normie-linux
+grep '^DEPS_LIST_URL=' root/etc/normie/update.conf
+grep '<contact>' Normie-Linux.kiwi
+```
 
-   ```
-   git tag -a v0.1.0-alpha -m "Normie Linux 0.1.0 alpha (source only)"
-   git push origin v0.1.0-alpha
-   gh release create v0.1.0-alpha --prerelease --title "Normie Linux 0.1.0 alpha (source only)" --notes-file docs/ALPHA-NOTES.md
-   ```
+Optional polish on the repository page: set the About text to "A beginner-friendly Linux distribution
+based on Fedora (alpha)", add topics such as `linux-distribution`, `fedora`, `kde-plasma`,
+`kiwi`, and upload a preview picture made from the logo (Settings, then Social preview):
 
-3. **Do not attach an ISO.** GitHub adds the source code archives to the release by itself; that is the whole
-   release. An ISO waits for the rebrand (see "ISO files" below).
-
-4. Optional polish on the repository page: set the About text to "A beginner-friendly Linux distribution
-   based on Fedora (alpha, source only)", add topics such as `linux-distribution`, `fedora`, `kde-plasma`,
-   `kiwi`, and upload a preview picture made from the logo (Settings, then Social preview):
-
-   ```
-   rsvg-convert -w 640 -h 640 branding/normie-logo.svg -o ~/normie-logo-640.png
-   ```
+```
+rsvg-convert -w 640 -h 640 branding/normie-logo.svg -o ~/normie-logo-640.png
+```
 
 ## Routine
 
@@ -87,8 +82,7 @@ git push
 
 GitHub release files are limited to about 2 GB each and these ISOs are larger. Host ISOs elsewhere
 (your own server, a torrent, a file host) and publish the SHA-256 checksum next to the download link.
-Only after the rebrand has been checked (`REBRANDING.md`, stages R3 to R5). Where and how:
-`DISTRIBUTING-THE-ISO.md`.
+Where and how: `DISTRIBUTING-THE-ISO.md`.
 
 ## What must never be committed
 

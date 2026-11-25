@@ -5,11 +5,11 @@
 A beginner-friendly Linux distribution, based on Fedora, built so that ordinary
 users never have to open a terminal.
 
-> **Status: alpha, source only.** The system builds, boots, installs, updates itself and sets up NVIDIA
-> graphics drivers (tested on one real machine so far). **There are no public ISOs yet:** the recipe replaces
-> Fedora's branding with its own, and that is being checked before any ISO is published
-> ([docs/REBRANDING.md](docs/REBRANDING.md)). No snapshots or rollback yet, and the
-> tools themselves update only by reinstalling until our own package repository exists
+> **Status: alpha.** The system builds, boots, installs, updates itself and sets up NVIDIA
+> graphics drivers (tested on one real machine so far). **The ISO is on the
+> [release page](https://github.com/ValerianGold/normie-linux/releases)**, hosted on SourceForge and the
+> Internet Archive because it is too big for GitHub; check the SHA-256 checksum after downloading. No snapshots or
+> rollback yet, and the tools themselves update only by reinstalling until our own package repository exists
 > ([docs/ROADMAP.md](docs/ROADMAP.md)). Not for anything important.
 >
 > What works, what is untested and what is missing: [docs/ALPHA-NOTES.md](docs/ALPHA-NOTES.md).

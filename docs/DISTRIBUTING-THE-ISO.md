@@ -1,7 +1,7 @@
 # Getting the ISO to people
 
-Not yet: no ISO is published until the rebrand has been checked on a built image and reviewed
-(`REBRANDING.md`, stages R3 to R5). This page is the plan for afterwards.
+The rebrand has been checked on a built image (the audit shows no `FAIL`, and a VM install was tried), so the
+alpha ISO can be published. This page says where and how.
 
 ## Why not GitHub
 
@@ -57,25 +57,60 @@ copy of the ISO and its checksum yourself. Many people use two places so one goi
   them. Not legal advice.
 - A **fresh VM install** works from the very ISO you upload, not just a previous build.
 
-## Step by step (when the checks above are done)
+## Step by step
+
+Replace `SFUSER` with your SourceForge username and `SFPROJECT` with the project's unix name (`normie-linux`
+if that was free). Everything is typed in a terminal on the computer that built the ISO.
 
 1. **Build and check.** `tools/update-iso.sh ...`, then `cd ~/normie-linux && python3 tools/audit-branding.py`
    (no `FAIL`, every remaining `REVIEW` line read), then install the ISO in a VM and boot the installed system.
-2. **Collect the files** from `~/normie-linux-out/Normie-Full-Live-build/`: the `.iso`, its `.sha256`, and
-   `BUILD-INFO.txt`. Make the package list from a booted copy: `rpm -qa | sort > Normie-Linux-45-alpha-packages.txt`.
-3. **Check the download** matches: `sha256sum -c <iso>.sha256`. Then boot that very file once more.
-4. **GitHub (source):** push, make the `v0.1.0-alpha` release without the ISO (`PUBLISHING.md`).
-5. **SourceForge (the ISO):** create a free account, then a project (Project Admin, unix name e.g. `normie-linux`).
-   Upload with rsync, which can resume a broken transfer (SourceForge recommends it above 100 MB):
-   `rsync -avP -e ssh <iso> <iso>.sha256 BUILD-INFO.txt USERNAME,PROJECTNAME@frs.sourceforge.net:/home/frs/project/P/PR/PROJECTNAME/0.1.0-alpha/`
-   where `P` is the project name's first letter and `PR` its first two (the exact line for your project is on
-   SourceForge's rsync page). In the project's Files tab set the ISO as the default download and add a `README`
-   in the folder with the checksum and the alpha warning.
-6. **Internet Archive (second copy):** make a free account, use the Upload button, give the item a title, a URL name such as
-   `normie-linux-0.1.0-alpha`, a description that begins with the alpha warning, and the same files. File names must be plain
+2. **Make the release folder** with the ISO under its public name, a new checksum, the package list and the
+   build record:
+
+   ```
+   B=~/normie-linux-out/Normie-Full-Live-build
+   R=~/normie-linux-out/release-0.1.0-alpha
+   mkdir -p "$R" && cd "$R"
+   cp --reflink=auto "$(ls $B/*.iso | head -n1)" Normie-Linux-0.1.0-alpha-x86_64.iso
+   sha256sum Normie-Linux-0.1.0-alpha-x86_64.iso > Normie-Linux-0.1.0-alpha-x86_64.iso.sha256
+   cp "$B/BUILD-INFO.txt" .
+   rpm --root "$B/build/image-root" -qa | sort > Normie-Linux-0.1.0-alpha-packages.txt
+   cat *.sha256; wc -l Normie-Linux-0.1.0-alpha-packages.txt
+   ```
+
+   Keep this folder: it is exactly what you upload.
+3. **Check the copy** matches before uploading: `cd "$R" && sha256sum -c *.sha256`. The checksum must be the
+   same as the one `update-iso.sh` printed for the original file.
+4. **SourceForge (the ISO):** create a free account, then a project (Project Admin, unix name e.g. `normie-linux`;
+   in its tool list, tick only **Files**). Upload with rsync, which can resume a broken transfer (add your
+   SSH key first, under Account Settings, SSH Settings; SourceForge recommends rsync above 100 MB):
+
+   ```
+   cd "$R"
+   rsync -avP -e ssh Normie-Linux-0.1.0-alpha-x86_64.iso Normie-Linux-0.1.0-alpha-x86_64.iso.sha256 BUILD-INFO.txt Normie-Linux-0.1.0-alpha-packages.txt SFUSER@frs.sourceforge.net:/home/frs/project/SFPROJECT/0.1.0-alpha/
+   ```
+
+   If SourceForge's own rsync page shows a different path, use that one. In the project's Files tab set the ISO as the
+   default download, and add a `README` in the folder with the checksum and the alpha warning.
+5. **Internet Archive (second copy):** make a free account, use the Upload button, give the item a title, an
+   identifier made only of letters, numbers, dashes and underscores (such as `normie-linux-0-1-0-alpha`; periods are
+   not allowed), a description that begins with the alpha warning, and the same four files. File names must be plain
    ASCII (no accents or spaces). The Archive makes a torrent for most items; the item page shows whether it did.
-7. **Link both** from the GitHub release notes and the README, with the SHA-256 next to the links.
-8. Do one download from each place, check the checksum, and boot it.
+6. **Tag the commit the ISO was built from** (it is named in `BUILD-INFO.txt`; use that commit, not the newest one,
+   so the published source matches the published ISO), then create the release without the ISO. Put the download
+   links in the notes:
+
+   ```
+   cd ~/normie-linux
+   git tag -a v0.1.0-alpha COMMIT -m "Normie Linux 0.1.0 alpha"
+   git push origin v0.1.0-alpha
+   SUM=$(cut -d' ' -f1 "$R"/Normie-Linux-0.1.0-alpha-x86_64.iso.sha256)
+   { printf '## Download the ISO (about 5 GB)\n\n- SourceForge: https://sourceforge.net/projects/SFPROJECT/files/0.1.0-alpha/\n- Internet Archive: https://archive.org/details/normie-linux-0-1-0-alpha\n\nSHA-256 of `Normie-Linux-0.1.0-alpha-x86_64.iso`:\n\n`%s`\n\n' "$SUM"; cat docs/ALPHA-NOTES.md; } > "$R/release-notes.md"
+   gh release create v0.1.0-alpha --prerelease --title "Normie Linux 0.1.0 alpha" --notes-file "$R/release-notes.md" "$R/Normie-Linux-0.1.0-alpha-x86_64.iso.sha256" "$R/Normie-Linux-0.1.0-alpha-packages.txt" "$R/BUILD-INFO.txt"
+   ```
+
+   Replace `COMMIT` with the commit from `BUILD-INFO.txt`.
+7. Do one download from each place, check the checksum, and boot it.
 
 ## Rough size and cost
 

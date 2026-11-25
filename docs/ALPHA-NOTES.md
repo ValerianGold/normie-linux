@@ -1,8 +1,9 @@
-# Normie Linux 0.1.0 alpha (source only)
+# Normie Linux 0.1.0 alpha
 
-This is the first public release of the **recipe** for Normie Linux: the files that build the system. **There is
-no ISO to download yet.** The recipe now replaces Fedora's branding with the project's own
-(`docs/REBRANDING.md`), but that has to be checked on a built system, and reviewed, before an ISO is published.
+This is the first public release of Normie Linux: the **recipe** that builds it (this repository) and a ready-made
+**ISO**. The ISO is about 5 GB, too big for a GitHub release, so it is hosted on **SourceForge** and the
+**Internet Archive**; the release page links to both and gives the SHA-256 checksum to compare after downloading.
+The system carries its own name, logo, wallpaper and Plasma look instead of Fedora's (`docs/REBRANDING.md`).
 
 Alpha means: it works for the person who built it, it has been tried on one real machine, and it is not for
 anything important.
@@ -28,8 +29,12 @@ anything important.
 
 ## Missing or limited
 
-- **No ISO yet.** The rebrand (own system name, logo, wallpaper and Plasma look) is in the recipe but has not been
-  audited on a built image, and the project intends to ask Fedora's legal list to look at it (recommended, not required).
+- **The rebrand was checked by the project's own audit tool and by installing in a virtual machine.** Fedora's
+  legal list has not looked at it (that is optional, and may still happen). A few harmless Fedora names remain
+  where the packages require them (`docs/REBRANDING.md`).
+- **The full ISO contains video and audio codecs from RPM Fusion Free** (H.264, H.265 and similar). Their licences
+  are free, but some countries restrict the patents behind them. Fedora itself does not ship them
+  (`docs/DISTRIBUTING-THE-ISO.md`).
 - **No snapshots or rollback.** A one-click restore needs Btrfs snapshots, which are planned.
 - **The tools update only by reinstalling** until the project has its own package repository. The dependency
   list does update on an installed system, because it is fetched from this repository.
@@ -38,6 +43,12 @@ anything important.
 All of this is tracked in `docs/ROADMAP.md`.
 
 ## Try it
+
+Download the ISO from the release page, check it against the SHA-256 checksum, and write it to a USB stick
+(Fedora Media Writer, balenaEtcher or Ventoy). Start the live session first: nothing is installed until you choose to.
+Try it in a virtual machine or on a computer with nothing important on it.
+
+## Build it yourself
 
 You need a Fedora 45 machine with KIWI installed. Follow `docs/START-HERE.md`; in short:
 

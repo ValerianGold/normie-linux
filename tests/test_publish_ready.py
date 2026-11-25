@@ -28,11 +28,13 @@ class FrontPage(unittest.TestCase):
         self.assertIn("branding/normie-logo.svg", read("README.md"))
         self.assertTrue(os.path.exists(os.path.join(ROOT, "branding", "normie-logo.svg")))
 
-    def test_readme_says_source_only_and_links_the_alpha_notes(self):
+    def test_readme_says_alpha_points_to_the_release_and_links_the_alpha_notes(self):
         text = read("README.md")
-        self.assertIn("source only", text.lower())
-        self.assertIn("There are no public ISOs yet", text)
+        self.assertIn("alpha", text.lower())
+        self.assertIn("/releases)", text)            # not /releases/latest: a pre-release is never "latest"
+        self.assertIn("SHA-256", text)
         self.assertIn("docs/ALPHA-NOTES.md", text)
+        self.assertNotIn("no public ISOs", text)
 
     def test_notice_says_the_logo_is_original(self):
         text = read("NOTICE.md")
@@ -46,25 +48,48 @@ class AlphaNotes(unittest.TestCase):
         self.low = " ".join(self.text.lower().split())      # line breaks do not matter
 
     def test_states_the_limits_plainly(self):
-        for phrase in ("source only", "no iso", "no snapshots", "reinstalling", "not for anything important"):
+        for phrase in ("no snapshots", "reinstalling", "not for anything important"):
+            self.assertIn(phrase, self.low, phrase)
+
+    def test_says_where_the_iso_is_and_how_to_check_it(self):
+        for phrase in ("sourceforge", "internet archive", "sha-256", "too big for a github release"):
+            self.assertIn(phrase, self.low, phrase)
+
+    def test_is_honest_about_the_codecs_and_the_unreviewed_rebrand(self):
+        for phrase in ("rpm fusion free", "legal list has not looked"):
             self.assertIn(phrase, self.low, phrase)
 
     def test_says_what_is_untested(self):
         for phrase in ("not tested yet", "secure boot", "older nvidia"):
             self.assertIn(phrase, self.low, phrase)
 
-    def test_does_not_offer_an_iso_download(self):
-        for bad in ("download the iso", "download iso", "iso download:", "releases/download"):
+    def test_does_not_link_an_iso_on_github(self):
+        for bad in ("releases/download",):
             self.assertNotIn(bad, self.low, bad)
 
 
 class ReleaseSteps(unittest.TestCase):
-    def test_release_is_a_source_only_prerelease(self):
-        text = read("docs", "PUBLISHING.md")
+    def test_release_is_a_prerelease_and_never_carries_the_iso(self):
+        text = read("docs", "DISTRIBUTING-THE-ISO.md")
         self.assertIn("gh release create", text)
         self.assertIn("--prerelease", text)
-        self.assertIn("--notes-file docs/ALPHA-NOTES.md", text)
-        self.assertIn("Do not attach an ISO", text)
+        self.assertIn("release-notes.md", text)
+        self.assertIn("docs/ALPHA-NOTES.md", text)
+        self.assertIn("Do not attach an ISO", read("docs", "PUBLISHING.md"))
+
+    def test_the_iso_steps_tag_the_build_commit_and_use_valid_archive_names(self):
+        text = read("docs", "DISTRIBUTING-THE-ISO.md")
+        self.assertIn("git tag -a v0.1.0-alpha COMMIT", text)
+        self.assertIn("BUILD-INFO.txt", text)
+        self.assertIn("rsync", text)
+        self.assertIn("frs.sourceforge.net", text)
+        self.assertIn("normie-linux-0-1-0-alpha", text)
+        self.assertNotIn("normie-linux-0.1.0-alpha`", text)          # Internet Archive identifiers cannot hold periods
+        # the gh command in the ISO steps must attach only small files
+        for line in text.splitlines():
+            if "gh release create" in line:
+                self.assertNotIn(".iso ", line.replace(".iso.sha256", ""), line)
+                self.assertIn("--prerelease", line)
 
     def test_release_steps_check_the_two_addresses_first(self):
         text = read("docs", "PUBLISHING.md")
