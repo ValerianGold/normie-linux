@@ -7,6 +7,8 @@ Release:        1%{?dist}
 Summary:        Normie Linux icons and artwork
 License:        GPL-3.0-or-later
 BuildArch:      noarch
+# everything in this package's folder except the spec, packed by tools/pack-sources.sh
+Source0:        normie-logos-sources.tar.gz
 
 Provides:       system-logos = %{version}-%{release}
 Provides:       redhat-logos = %{version}-%{release}
@@ -18,11 +20,12 @@ The Normie Linux logo as the system icon, the Start-menu button (start-here), th
 and the boot-splash watermark. The artwork is original to this project.
 
 %prep
+%setup -q -c
 
 %build
 
 %install
-F=%{_sourcedir}/files
+F=$PWD/files
 ICONS=%{buildroot}%{_datadir}/icons/hicolor
 
 install -d $ICONS/scalable/apps $ICONS/scalable/places

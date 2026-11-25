@@ -7,7 +7,7 @@ There are three lanes. Which one a fix uses decides how fast it arrives.
 |---|---|---|---|
 | 1. Dependencies | A missing library or package | You edit the package list on GitHub. Machines pick it up through Update & Repair | **No** (once `DEPS_LIST_URL` is set) |
 | 2. Fedora, RPM Fusion, Flathub, NVIDIA | Upstream updates and bug fixes | Update & Repair, straight from those projects | No |
-| 3. Our own tools and branding | The scripts, window, settings, icons | Needs our own package repository (ROADMAP M3) | **Yes, today.** After M3: no |
+| 3. Our own tools and branding | The scripts, window, settings, icons | Our own package repository (ROADMAP M3, `PACKAGE-REPOSITORY.md`). Branding packages: yes, on systems installed from a build that has the repository file. The tools themselves: not packaged yet | Branding: no, once set up. Tools: **yes, today** |
 
 ## Worked example (lane 1)
 

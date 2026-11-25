@@ -1,0 +1,12 @@
+# Normie Linux's own packages: the release files, logos, wallpaper, Plasma look and, later, the tools.
+# Update & Repair installs their updates like any others. Hosted on Copr, which signs every package.
+# This file is filled in by tools/set-copr-user.sh. Until then the repository is switched off.
+[normie]
+name=Normie Linux own packages
+baseurl=https://download.copr.fedorainfracloud.org/results/OWNER/PROJECT/fedora-$releasever-$basearch/
+type=rpm-md
+skip_if_unavailable=True
+gpgcheck=1
+gpgkey=https://download.copr.fedorainfracloud.org/results/OWNER/PROJECT/pubkey.gpg
+repo_gpgcheck=0
+enabled=0

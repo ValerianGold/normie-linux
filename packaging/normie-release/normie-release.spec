@@ -13,6 +13,8 @@ Release:        1%{?dist}
 Summary:        Normie Linux release files
 License:        MIT
 BuildArch:      noarch
+# everything in this package's folder except the spec, packed by tools/pack-sources.sh
+Source0:        normie-release-sources.tar.gz
 
 Provides:       system-release = %{version}-%{release}
 Provides:       system-release(%{version})
@@ -35,6 +37,7 @@ Release files for Normie Linux, a beginner-friendly distribution based on Fedora
 /etc/os-release, the version macros, the dnf5 defaults and the login banner.
 
 %prep
+%setup -q -c
 
 %build
 
@@ -43,7 +46,7 @@ install -d %{buildroot}%{_prefix}/lib
 sed -e 's|@VERSION_ID@|%{dist_version}|g' \
     -e 's|@RELEASE_NAME@|%{release_name}|g' \
     -e 's|@HOME_URL@|%{home_url}|g' \
-    %{_sourcedir}/os-release.in > %{buildroot}%{_prefix}/lib/os-release
+    os-release.in > %{buildroot}%{_prefix}/lib/os-release
 
 echo "Normie Linux release %{dist_version} (%{release_name})" > %{buildroot}%{_prefix}/lib/normie-release
 echo "cpe:/o:normielinux:normie:%{dist_version}" > %{buildroot}%{_prefix}/lib/system-release-cpe
@@ -55,24 +58,28 @@ ln -s normie-release %{buildroot}%{_sysconfdir}/system-release
 ln -s normie-release %{buildroot}%{_sysconfdir}/redhat-release
 ln -s ../usr/lib/system-release-cpe %{buildroot}%{_sysconfdir}/system-release-cpe
 
-install -pm 0644 %{_sourcedir}/issue %{buildroot}%{_prefix}/lib/issue
-install -pm 0644 %{_sourcedir}/issue %{buildroot}%{_prefix}/lib/issue.net
+install -pm 0644 issue %{buildroot}%{_prefix}/lib/issue
+install -pm 0644 issue %{buildroot}%{_prefix}/lib/issue.net
 ln -s ../usr/lib/issue %{buildroot}%{_sysconfdir}/issue
 ln -s ../usr/lib/issue.net %{buildroot}%{_sysconfdir}/issue.net
 
 install -d %{buildroot}%{_rpmconfigdir}/macros.d
-sed -e 's|@HOME_URL@|%{home_url}|g' %{_sourcedir}/macros.dist > %{buildroot}%{_rpmconfigdir}/macros.d/macros.dist
+sed -e 's|@HOME_URL@|%{home_url}|g' macros.dist > %{buildroot}%{_rpmconfigdir}/macros.d/macros.dist
 chmod 0644 %{buildroot}%{_rpmconfigdir}/macros.d/macros.dist
 
 install -d %{buildroot}%{_datadir}/dnf5/libdnf.conf.d
-install -pm 0644 %{_sourcedir}/dnf5-defaults.conf %{buildroot}%{_datadir}/dnf5/libdnf.conf.d/20-defaults.conf
+install -pm 0644 dnf5-defaults.conf %{buildroot}%{_datadir}/dnf5/libdnf.conf.d/20-defaults.conf
 install -d %{buildroot}%{_datadir}/dnf/plugins
-install -pm 0644 %{_sourcedir}/copr.vendor.conf %{buildroot}%{_datadir}/dnf/plugins/copr.vendor.conf
+install -pm 0644 copr.vendor.conf %{buildroot}%{_datadir}/dnf/plugins/copr.vendor.conf
 install -d %{buildroot}%{_sysconfdir}/dnf/protected.d
-install -pm 0644 %{_sourcedir}/protected.conf %{buildroot}%{_sysconfdir}/dnf/protected.d/normie-desktop.conf
+install -pm 0644 protected.conf %{buildroot}%{_sysconfdir}/dnf/protected.d/normie-desktop.conf
+
+# our own package repository (switched on by tools/set-copr-user.sh): this is how updates reach installed systems
+install -d %{buildroot}%{_sysconfdir}/yum.repos.d
+install -pm 0644 normie.repo %{buildroot}%{_sysconfdir}/yum.repos.d/normie.repo
 
 mkdir -p licenses
-install -pm 0644 %{_sourcedir}/LICENSE licenses/LICENSE
+install -pm 0644 LICENSE licenses/LICENSE
 
 %files
 %license licenses/LICENSE
@@ -98,6 +105,7 @@ install -pm 0644 %{_sourcedir}/LICENSE licenses/LICENSE
 %dir %{_sysconfdir}/dnf
 %dir %{_sysconfdir}/dnf/protected.d
 %{_sysconfdir}/dnf/protected.d/normie-desktop.conf
+%config(noreplace) %{_sysconfdir}/yum.repos.d/normie.repo
 
 %changelog
 * Tue Nov 24 2026 Normie Linux contributors <noreply@invalid> - 45-1

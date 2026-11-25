@@ -7,6 +7,8 @@ Release:        1%{?dist}
 Summary:        Normie Linux default Plasma look and feel
 License:        GPL-2.0-or-later
 BuildArch:      noarch
+# everything in this package's folder except the spec, packed by tools/pack-sources.sh
+Source0:        normie-lookandfeel-sources.tar.gz
 
 Requires:       plasma-workspace
 Requires:       normie-logos
@@ -17,20 +19,21 @@ The default Plasma look-and-feel for Normie Linux (id org.normielinux.normie.des
 dark Breeze style, the Normie wallpaper and the Normie logo on the Start button.
 
 %prep
+%setup -q -c
 
 %build
 
 %install
 L=%{buildroot}%{_datadir}/plasma/look-and-feel/org.normielinux.normie.desktop
 install -d $L/contents/layouts $L/contents/plasmoidsetupscripts $L/contents/previews
-install -pm 0644 %{_sourcedir}/files/metadata.json $L/metadata.json
-install -pm 0644 %{_sourcedir}/files/contents/defaults $L/contents/defaults
-install -pm 0644 %{_sourcedir}/files/contents/layouts/org.kde.plasma.desktop-layout.js $L/contents/layouts/
+install -pm 0644 files/metadata.json $L/metadata.json
+install -pm 0644 files/contents/defaults $L/contents/defaults
+install -pm 0644 files/contents/layouts/org.kde.plasma.desktop-layout.js $L/contents/layouts/
 for s in kickoff kicker kickerdash icontasks; do
-    install -pm 0644 %{_sourcedir}/files/contents/plasmoidsetupscripts/org.kde.plasma.$s.js $L/contents/plasmoidsetupscripts/
+    install -pm 0644 files/contents/plasmoidsetupscripts/org.kde.plasma.$s.js $L/contents/plasmoidsetupscripts/
 done
-install -pm 0644 %{_sourcedir}/files/previews/preview.png $L/contents/previews/preview.png
-install -pm 0644 %{_sourcedir}/files/previews/fullscreenpreview.jpg $L/contents/previews/fullscreenpreview.jpg
+install -pm 0644 files/previews/preview.png $L/contents/previews/preview.png
+install -pm 0644 files/previews/fullscreenpreview.jpg $L/contents/previews/fullscreenpreview.jpg
 
 %files
 %{_datadir}/plasma/look-and-feel/org.normielinux.normie.desktop

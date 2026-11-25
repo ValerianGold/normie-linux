@@ -144,3 +144,12 @@ step that installs them on the user's own computer. `tools/audit-branding.py` li
 The rebrand removes Fedora's trademarks and replaces them (D-16), which is what Fedora's guidelines ask of a
 derivative that is not called Fedora. Asking the list about the few open points (kept `ID_LIKE=fedora` and
 `%fedora`, packages whose names contain Fedora) is a precaution and does not gate publishing.
+
+## D-20 Our own packages are published on Copr, signed by Copr: DECIDED
+Updates to our own packages (D-17 only covered getting them into the ISO) come from a Copr project. Copr builds from
+source packages we upload (`tools/build-srpms.sh`, `tools/publish-packages.sh`), so each spec builds from a
+`Source0` tarball made by `tools/pack-sources.sh`, and Copr signs the result with its own key, so we hold no signing
+key. `normie-release` ships `/etc/yum.repos.d/normie.repo` (switched on by `tools/set-copr-user.sh`);
+`skip_if_unavailable=True` keeps a missing repository from breaking updates. Systems installed from the 0.1.0 alpha ISO
+have no repository file and need a reinstall. Chosen over our own server because it costs nothing and needs no
+key handling; the cost is depending on Fedora's infrastructure, which `PACKAGE-REPOSITORY.md` says plainly.

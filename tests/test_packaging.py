@@ -114,7 +114,14 @@ class Spec:
         buildroot, builddir = os.path.join(work, "root"), os.path.join(work, "build")
         os.makedirs(buildroot)
         os.makedirs(builddir)
-        macros = dict(self.macros, buildroot=buildroot, _sourcedir=self.dir)
+        # what rpmbuild does: pack the folder into Source0, unpack it in the build folder (%setup -q -c)
+        # and run %install there
+        sources = os.path.join(work, "sources")
+        packed = subprocess.run([os.path.join(ROOT, "tools", "pack-sources.sh"), self.dir, sources],
+                                capture_output=True, text=True, check=True).stdout.strip()
+        assert os.path.basename(packed) == expand(self.tags["Source0"][0], self.macros), "Source0 does not name the packed tarball"
+        subprocess.run(["tar", "-xzf", packed, "-C", builddir], check=True)
+        macros = dict(self.macros, buildroot=buildroot)
         script = expand("\n".join(self.sections["install"]), macros)
         r = subprocess.run(["bash", "-e", "-c", script], cwd=builddir, capture_output=True, text=True)
         if r.returncode != 0:
@@ -236,7 +243,8 @@ class EverySpec(unittest.TestCase):
     def test_no_installed_text_mentions_fedora_except_where_it_is_the_truth(self):
         # the release package says "ID_LIKE=fedora" and keeps Fedora's repositories; nothing else may
         allowed = {"normie-release": {"/usr/lib/os-release", "/usr/lib/rpm/macros.d/macros.dist",
-                                      "/usr/share/dnf/plugins/copr.vendor.conf"}}
+                                      "/usr/share/dnf/plugins/copr.vendor.conf",
+                                      "/etc/yum.repos.d/normie.repo"}}   # the Copr web address
         for s in self.specs:
             buildroot, _, _ = self.built[s.name]
             for path in tree(buildroot):
@@ -263,7 +271,7 @@ class EverySpec(unittest.TestCase):
     def test_the_spec_files_do_not_use_macros_this_test_cannot_check(self):
         for s in self.specs:
             expand("\n".join(s.sections["install"] + s.sections["files"]),
-                   dict(s.macros, buildroot="/x", _sourcedir="/y"))
+                   dict(s.macros, buildroot="/x"))
 
 
 class ReleasePackage(unittest.TestCase):

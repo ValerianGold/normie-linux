@@ -350,9 +350,12 @@ echo "$*" >> "$FAKE_LOG"
 [ -n "${FAKE_RPMBUILD_FAIL:-}" ] && { echo "error: bad spec"; exit 1; }
 top=""; prev=""
 for a in "$@"; do [ "$prev" = "--define" ] && case "$a" in _topdir\ *) top="${a#_topdir }" ;; esac; prev="$a"; done
-mkdir -p "$top/RPMS/noarch"
+mkdir -p "$top/RPMS/noarch" "$top/SRPMS"
 n="$(sed -n 's/^Name:[[:space:]]*//p' "$spec" | head -n1)"
-echo rpm > "$top/RPMS/noarch/$n-1-1.noarch.rpm"
+case "$1" in
+	-bs) echo srpm > "$top/SRPMS/$n-1-1.src.rpm" ;;
+	*)   echo rpm > "$top/RPMS/noarch/$n-1-1.noarch.rpm" ;;
+esac
 '''
     FAKE_CREATEREPO = r'''#!/bin/bash
 echo "createrepo_c $*" >> "$FAKE_LOG"
@@ -369,7 +372,8 @@ mkdir -p "$last/repodata"; echo meta > "$last/repodata/repomd.xml"
         self.local = d + "/local-repo"
         shutil.copytree(os.path.join(ROOT, "packaging"), self.repo + "/packaging")
         os.makedirs(self.repo + "/tools")
-        shutil.copy(os.path.join(ROOT, "tools", "build-rpms.sh"), self.repo + "/tools/build-rpms.sh")
+        for script in ("build-rpms.sh", "pack-sources.sh"):
+            shutil.copy(os.path.join(ROOT, "tools", script), self.repo + "/tools/" + script)
         write(self.repo + "/Normie-Linux.kiwi", "<image><description><contact>TODO</contact></description></image>")
         write(self.bin + "/rpmbuild", self.FAKE_RPMBUILD, 0o755)
         write(self.bin + "/createrepo_c", self.FAKE_CREATEREPO, 0o755)
@@ -395,12 +399,12 @@ mkdir -p "$last/repodata"; echo meta > "$last/repodata/repomd.xml"
         self.assertEqual(len([c for c in self.calls() if c.startswith("-bb")]), 4)
         self.assertEqual(len([c for c in self.calls() if c.startswith("createrepo_c")]), 1)
 
-    def test_the_sources_folder_is_the_packages_own_folder(self):
+    def test_each_package_is_built_from_its_packed_sources(self):
         self.run_script()
-        for c in self.calls():
-            if c.startswith("-bb"):
-                spec = [w for w in c.split() if w.endswith(".spec")][0]
-                self.assertIn("_sourcedir " + self.repo + "/" + os.path.dirname(spec), c)
+        builds = [c for c in self.calls() if c.startswith("-bb")]
+        self.assertEqual(len(builds), 4)
+        for c in builds:
+            self.assertRegex(c, r"_sourcedir \S*/normie-rpms-\w+/sources")     # a folder holding the tarballs
 
     def test_the_project_address_from_the_kiwi_file_goes_into_the_packages(self):
         write(self.repo + "/Normie-Linux.kiwi",
@@ -470,6 +474,137 @@ mkdir -p "$last/repodata"; echo meta > "$last/repodata/repomd.xml"
 def read_file(path):
     with open(path) as fh:
         return fh.read()
+
+
+class SourceRpmsAndCopr(unittest.TestCase):
+    """build-srpms.sh, set-copr-user.sh and publish-packages.sh, with fake rpmbuild and copr-cli."""
+    FAKE_COPR = "#!/bin/bash\necho \"copr-cli $*\" >> \"$FAKE_LOG\"\n[ -n \"${FAKE_COPR_FAIL:-}\" ] && exit 1\nexit 0\n"
+
+    def setUp(self):
+        d = tmpdir()
+        self.d, self.repo, self.bin, self.log = d, d + "/repo", d + "/bin", d + "/calls.log"
+        self.home = d + "/home"
+        shutil.copytree(os.path.join(ROOT, "packaging"), self.repo + "/packaging")
+        os.makedirs(self.repo + "/tools")
+        for script in ("build-srpms.sh", "pack-sources.sh", "set-copr-user.sh", "publish-packages.sh"):
+            shutil.copy(os.path.join(ROOT, "tools", script), self.repo + "/tools/" + script)
+        write(self.repo + "/Normie-Linux.kiwi",
+              "<image><description><contact>https://github.com/someone/normie-linux</contact></description></image>")
+        write(self.bin + "/rpmbuild", BuildRpmsScript.FAKE_RPMBUILD, 0o755)
+        write(self.bin + "/copr-cli", self.FAKE_COPR, 0o755)
+        write(self.log, "")
+        os.makedirs(self.home + "/.config")
+        self.env = dict(os.environ, PATH=self.bin + ":" + os.environ["PATH"], HOME=self.home, FAKE_LOG=self.log)
+        self.env.pop("NORMIE_OUT", None)
+
+    def run_tool(self, tool, *args, **extra):
+        r = subprocess.run(["bash", f"{self.repo}/tools/{tool}", *args], cwd="/", env=dict(self.env, **extra),
+                           capture_output=True, text=True)
+        return r.returncode, r.stdout + r.stderr
+
+    def calls(self):
+        return [l for l in read_file(self.log).splitlines() if l]
+
+    def repofile(self):
+        return read_file(self.repo + "/packaging/normie-release/normie.repo")
+
+    # ---- the repository file that every new system gets
+    def test_the_shipped_repo_file_is_switched_off_until_a_copr_user_is_set(self):
+        text = self.repofile()
+        self.assertIn("enabled=0", text)
+        self.assertIn("/results/OWNER/PROJECT/", text)
+
+    def test_set_copr_user_fills_in_the_repository_and_switches_it_on(self):
+        rc, out = self.run_tool("set-copr-user.sh", "ValerianGold")
+        self.assertEqual(rc, 0, out)
+        text = self.repofile()
+        self.assertIn("https://download.copr.fedorainfracloud.org/results/ValerianGold/normie-linux/fedora-$releasever-$basearch/", text)
+        self.assertIn("gpgkey=https://download.copr.fedorainfracloud.org/results/ValerianGold/normie-linux/pubkey.gpg", text)
+        self.assertIn("gpgcheck=1", text)
+        self.assertIn("skip_if_unavailable=True", text)
+        self.assertIn("enabled=1", text)
+        self.assertNotIn("OWNER", text)
+        self.assertEqual(read_file(self.repo + "/packaging/copr.conf"), "COPR_OWNER=ValerianGold\nCOPR_PROJECT=normie-linux\n")
+
+    def test_set_copr_user_can_run_again_with_other_names(self):
+        self.run_tool("set-copr-user.sh", "one")
+        rc, out = self.run_tool("set-copr-user.sh", "two", "other-project")
+        self.assertEqual(rc, 0, out)
+        text = self.repofile()
+        self.assertIn("results/two/other-project/fedora-", text)
+        self.assertNotIn("results/one/", text)
+        self.assertEqual(text.count("enabled="), 1)
+
+    def test_set_copr_user_refuses_odd_names_and_changes_nothing(self):
+        before = self.repofile()
+        for bad in ("bad name", "a/b", "", "x;rm"):
+            rc, _ = self.run_tool("set-copr-user.sh", bad)
+            self.assertEqual(rc, 2, bad)
+        self.assertEqual(self.repofile(), before)
+        self.assertFalse(os.path.exists(self.repo + "/packaging/copr.conf"))
+
+    # ---- source packages
+    def test_build_srpms_makes_one_source_package_per_spec(self):
+        rc, out = self.run_tool("build-srpms.sh")
+        self.assertEqual(rc, 0, out)
+        found = sorted(os.listdir(self.home + "/normie-linux-out/srpms"))
+        self.assertEqual(len(found), 4, found)
+        self.assertTrue(all(f.endswith(".src.rpm") for f in found))
+        self.assertEqual(len([c for c in self.calls() if c.startswith("-bs")]), 4)
+
+    def test_build_srpms_without_rpmbuild_gives_the_install_command(self):
+        lean = self.d + "/lean"
+        os.makedirs(lean)
+        for tool in ("dirname", "basename", "sed", "head", "cat", "mkdir", "rm", "mktemp", "tar", "cp", "ls", "tail", "echo"):
+            if shutil.which(tool):
+                os.symlink(shutil.which(tool), f"{lean}/{tool}")
+        r = subprocess.run([shutil.which("bash"), self.repo + "/tools/build-srpms.sh"], cwd="/",
+                           env=dict(self.env, PATH=lean), capture_output=True, text=True)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("sudo dnf install rpm-build", r.stdout + r.stderr)
+
+    # ---- publishing
+    def test_publish_stops_until_a_copr_project_is_set(self):
+        rc, out = self.run_tool("publish-packages.sh")
+        self.assertEqual(rc, 1)
+        self.assertIn("tools/set-copr-user.sh", out)
+        self.assertEqual(self.calls(), [])
+
+    def test_publish_stops_without_the_api_token(self):
+        self.run_tool("set-copr-user.sh", "someone")
+        rc, out = self.run_tool("publish-packages.sh")
+        self.assertEqual(rc, 1)
+        self.assertIn("~/.config/copr", out)
+        self.assertEqual([c for c in self.calls() if c.startswith("copr-cli")], [])
+
+    def test_publish_sends_each_source_package_to_the_project(self):
+        self.run_tool("set-copr-user.sh", "someone")
+        write(self.home + "/.config/copr", "[copr-cli]\nlogin = x\n")
+        rc, out = self.run_tool("publish-packages.sh")
+        self.assertEqual(rc, 0, out)
+        sent = [c for c in self.calls() if c.startswith("copr-cli")]
+        self.assertEqual(len(sent), 4, sent)
+        for c in sent:
+            self.assertRegex(c, r"^copr-cli build someone/normie-linux \S+\.src\.rpm$")
+
+    def test_a_failed_copr_build_stops_the_script(self):
+        self.run_tool("set-copr-user.sh", "someone")
+        write(self.home + "/.config/copr", "[copr-cli]\nlogin = x\n")
+        rc, _ = self.run_tool("publish-packages.sh", FAKE_COPR_FAIL="1")
+        self.assertNotEqual(rc, 0)
+        self.assertEqual(len([c for c in self.calls() if c.startswith("copr-cli")]), 1)       # did not carry on
+
+    def test_the_source_tarball_holds_everything_but_the_spec(self):
+        import tarfile
+        out = self.d + "/tarballs"
+        r = subprocess.run(["bash", ROOT + "/tools/pack-sources.sh", ROOT + "/packaging/normie-release", out],
+                           capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        with tarfile.open(out + "/normie-release-sources.tar.gz") as tar:
+            names = {n.lstrip("./") for n in tar.getnames()}
+        self.assertIn("normie.repo", names)
+        self.assertIn("os-release.in", names)
+        self.assertNotIn("normie-release.spec", names)
 
 
 class UpdateIsoBuildsThePackages(unittest.TestCase):

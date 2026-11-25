@@ -56,15 +56,16 @@ fi
 
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/normie-rpms-XXXXXX")"
 trap 'rm -rf -- "$WORK"' EXIT
-mkdir -p "$WORK/top" "$WORK/repo"
+mkdir -p "$WORK/top" "$WORK/repo" "$WORK/sources"
 
 echo "Building the Normie Linux packages..."
 for spec in "${SPECS[@]}"; do
 	dir="$(cd "$(dirname "$spec")" && pwd)"
 	echo "  $(basename "$spec")"
+	"$REPO/tools/pack-sources.sh" "$dir" "$WORK/sources" >/dev/null
 	rpmbuild -bb "$spec" --quiet \
 		--define "_topdir $WORK/top" \
-		--define "_sourcedir $dir" \
+		--define "_sourcedir $WORK/sources" \
 		"${DEFINES[@]}" >"$WORK/build.log" 2>&1 || {
 			echo "STOPPED: building $(basename "$spec") failed. rpmbuild said:" >&2
 			tail -n 40 "$WORK/build.log" >&2

@@ -6,6 +6,8 @@ Release:        1%{?dist}
 Summary:        Normie Linux default wallpaper for KDE
 License:        GPL-3.0-or-later
 BuildArch:      noarch
+# everything in this package's folder except the spec, packed by tools/pack-sources.sh
+Source0:        normie-backgrounds-kde-sources.tar.gz
 
 Provides:       system-backgrounds-kde = %{version}-%{release}
 Provides:       desktop-backgrounds-kde = %{version}-%{release}
@@ -16,16 +18,17 @@ The default wallpaper for Normie Linux: a dark night sky with embers rising from
 It is installed as the KDE wallpaper "Normie" and is also what /usr/share/wallpapers/Default points to.
 
 %prep
+%setup -q -c
 
 %build
 
 %install
 W=%{buildroot}%{_datadir}/wallpapers
 install -d $W/Normie/contents/images
-install -pm 0644 %{_sourcedir}/files/metadata.json $W/Normie/metadata.json
-install -pm 0644 %{_sourcedir}/files/images/1920x1080.jpg $W/Normie/contents/images/1920x1080.jpg
-install -pm 0644 %{_sourcedir}/files/images/3840x2160.jpg $W/Normie/contents/images/3840x2160.jpg
-install -pm 0644 %{_sourcedir}/files/screenshot.jpg $W/Normie/contents/screenshot.jpg
+install -pm 0644 files/metadata.json $W/Normie/metadata.json
+install -pm 0644 files/images/1920x1080.jpg $W/Normie/contents/images/1920x1080.jpg
+install -pm 0644 files/images/3840x2160.jpg $W/Normie/contents/images/3840x2160.jpg
+install -pm 0644 files/screenshot.jpg $W/Normie/contents/screenshot.jpg
 ln -s Normie $W/Default
 
 %files
