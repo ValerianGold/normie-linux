@@ -9,7 +9,7 @@ users never have to open a terminal.
 > graphics drivers (tested on one real machine so far). **The ISO is on the
 > [release page](https://github.com/ValerianGold/normie-linux/releases)**, hosted on SourceForge and the
 > Internet Archive because it is too big for GitHub; check the SHA-256 checksum after downloading. No snapshots or
-> rollback yet, and the tools themselves update only by reinstalling until our own package repository exists
+> rollback yet, and the tools themselves (as opposed to our logo, wallpaper and release files, which update through Update & Repair) update only by reinstalling until they are packaged
 > ([docs/ROADMAP.md](docs/ROADMAP.md)). Not for anything important.
 >
 > What works, what is untested and what is missing: [docs/ALPHA-NOTES.md](docs/ALPHA-NOTES.md).

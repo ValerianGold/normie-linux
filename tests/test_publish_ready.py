@@ -79,12 +79,12 @@ class ReleaseSteps(unittest.TestCase):
 
     def test_the_iso_steps_tag_the_build_commit_and_use_valid_archive_names(self):
         text = read("docs", "DISTRIBUTING-THE-ISO.md")
-        self.assertIn("git tag -a v0.1.0-alpha COMMIT", text)
+        self.assertIn('git tag -a "v$VER" COMMIT', text)
         self.assertIn("BUILD-INFO.txt", text)
         self.assertIn("rsync", text)
         self.assertIn("frs.sourceforge.net", text)
-        self.assertIn("normie-linux-0-1-0-alpha", text)
-        self.assertNotIn("normie-linux-0.1.0-alpha`", text)          # Internet Archive identifiers cannot hold periods
+        self.assertIn("IAID=normie-linux-${VER//./-}", text)
+        self.assertNotIn("normie-linux-0.1", text)          # Internet Archive identifiers cannot hold periods
         # the gh command in the ISO steps must attach only small files
         for line in text.splitlines():
             if "gh release create" in line:

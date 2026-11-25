@@ -59,58 +59,106 @@ copy of the ISO and its checksum yourself. Many people use two places so one goi
 
 ## Step by step
 
-Replace `SFUSER` with your SourceForge username and `SFPROJECT` with the project's unix name (`normie-linux`
-if that was free). Everything is typed in a terminal on the computer that built the ISO.
+Set these once per release (the example is the 0.1.1 alpha). `SFUSER` is your SourceForge username and
+`SFPROJECT` the project's unix name (`normie-linux`). Everything is typed in a terminal on the computer that
+built the ISO, and the same terminal window must be used for all the steps, because they share these names:
+
+```
+VER=0.1.1-alpha
+SFUSER=your-sourceforge-username
+SFPROJECT=normie-linux
+IAID=normie-linux-${VER//./-}            # Internet Archive names allow no periods
+NAME=Normie-Linux-$VER-x86_64
+B=~/normie-linux-out/Normie-Full-Live-build
+R=~/normie-linux-out/release-$VER
+```
 
 1. **Build and check.** `tools/update-iso.sh ...`, then `cd ~/normie-linux && python3 tools/audit-branding.py`
-   (no `FAIL`, every remaining `REVIEW` line read), then install the ISO in a VM and boot the installed system.
+   (no `FAIL`, every remaining `REVIEW` line read), then install the ISO in a VM, boot the installed system and
+   **run Update & Repair: its log must show no `404`** (`START-HERE.md`).
 2. **Make the release folder** with the ISO under its public name, a new checksum, the package list and the
    build record:
 
    ```
-   B=~/normie-linux-out/Normie-Full-Live-build
-   R=~/normie-linux-out/release-0.1.0-alpha
    mkdir -p "$R" && cd "$R"
-   cp --reflink=auto "$(ls $B/*.iso | head -n1)" Normie-Linux-0.1.0-alpha-x86_64.iso
-   sha256sum Normie-Linux-0.1.0-alpha-x86_64.iso > Normie-Linux-0.1.0-alpha-x86_64.iso.sha256
+   cp --reflink=auto "$(ls $B/*.iso | head -n1)" $NAME.iso
+   sha256sum $NAME.iso > $NAME.iso.sha256
    cp "$B/BUILD-INFO.txt" .
-   rpm --root "$B/build/image-root" -qa | sort > Normie-Linux-0.1.0-alpha-packages.txt
-   cat *.sha256; wc -l Normie-Linux-0.1.0-alpha-packages.txt
+   rpm --root "$B/build/image-root" -qa | sort > $NAME-packages.txt
+   cat *.sha256; wc -l $NAME-packages.txt
    ```
 
-   Keep this folder: it is exactly what you upload.
-3. **Check the copy** matches before uploading: `cd "$R" && sha256sum -c *.sha256`. The checksum must be the
-   same as the one `update-iso.sh` printed for the original file.
-4. **SourceForge (the ISO):** create a free account, then a project (Project Admin, unix name e.g. `normie-linux`;
+   Keep this folder: it is exactly what you upload. The checksum must be the same as the one
+   `update-iso.sh` printed for the original file (`cat "$B"/*.sha256`).
+3. **SourceForge (the ISO):** create a free account, then a project (Project Admin, unix name e.g. `normie-linux`;
    in its tool list, tick only **Files**). Upload with rsync, which can resume a broken transfer (add your
-   SSH key first, under Account Settings, SSH Settings; SourceForge recommends rsync above 100 MB):
+   SSH key first, under Account Settings, SSH Settings, or just type your password when asked):
 
    ```
    cd "$R"
-   rsync -avP -e ssh Normie-Linux-0.1.0-alpha-x86_64.iso Normie-Linux-0.1.0-alpha-x86_64.iso.sha256 BUILD-INFO.txt Normie-Linux-0.1.0-alpha-packages.txt SFUSER@frs.sourceforge.net:/home/frs/project/SFPROJECT/0.1.0-alpha/
+   rsync -avP -e ssh $NAME.iso $NAME.iso.sha256 BUILD-INFO.txt $NAME-packages.txt $SFUSER@frs.sourceforge.net:/home/frs/project/$SFPROJECT/$VER/
    ```
 
    If SourceForge's own rsync page shows a different path, use that one. In the project's Files tab set the ISO as the
-   default download, and add a `README` in the folder with the checksum and the alpha warning.
-5. **Internet Archive (second copy):** make a free account, use the Upload button, give the item a title, an
-   identifier made only of letters, numbers, dashes and underscores (such as `normie-linux-0-1-0-alpha`; periods are
-   not allowed), a description that begins with the alpha warning, and the same four files. File names must be plain
-   ASCII (no accents or spaces). The Archive makes a torrent for most items; the item page shows whether it did.
-6. **Tag the commit the ISO was built from** (it is named in `BUILD-INFO.txt`; use that commit, not the newest one,
+   default download (the little (i) beside the file), and add a `README` in the folder with the checksum and the
+   alpha warning.
+4. **Internet Archive (second copy):** the web uploader works for small files, but a 5 GB file can hang on "finishing
+   upload". The command line is dependable. Sign-in with Google has no password, so use the keys from
+   <https://archive.org/account/s3.php> in `~/.config/ia.ini`:
+
+   ```
+   [s3]
+   access = YOUR-ACCESS-KEY
+   secret = YOUR-SECRET-KEY
+   ```
+
+   Then (the first line downloads the tool once):
+
+   ```
+   cd "$R"
+   [ -x ./ia ] || { curl -LOs https://archive.org/download/ia-pex/ia && chmod +x ./ia; }
+   ./ia --config-file ~/.config/ia.ini upload $IAID $NAME.iso $NAME.iso.sha256 BUILD-INFO.txt $NAME-packages.txt --checksum --retries 10 --metadata="mediatype:software" --metadata="title:Normie Linux $VER (x86_64 live ISO)" --metadata="description:ALPHA, not for anything important. Beginner-friendly Linux based on Fedora. SHA-256: $(cut -d' ' -f1 $NAME.iso.sha256). Source: https://github.com/ValerianGold/normie-linux"
+   ```
+
+   The identifier may use only letters, numbers, dashes and underscores. File names must be plain ASCII.
+5. **Tag the commit the ISO was built from** (it is named in `BUILD-INFO.txt`; use that commit, not the newest one,
    so the published source matches the published ISO), then create the release without the ISO. Put the download
-   links in the notes:
+   links in the notes. Replace `COMMIT` with the commit from `BUILD-INFO.txt`:
 
    ```
    cd ~/normie-linux
-   git tag -a v0.1.0-alpha COMMIT -m "Normie Linux 0.1.0 alpha"
-   git push origin v0.1.0-alpha
-   SUM=$(cut -d' ' -f1 "$R"/Normie-Linux-0.1.0-alpha-x86_64.iso.sha256)
-   { printf '## Download the ISO (about 5 GB)\n\n- SourceForge: https://sourceforge.net/projects/SFPROJECT/files/0.1.0-alpha/\n- Internet Archive: https://archive.org/details/normie-linux-0-1-0-alpha\n\nSHA-256 of `Normie-Linux-0.1.0-alpha-x86_64.iso`:\n\n`%s`\n\n' "$SUM"; cat docs/ALPHA-NOTES.md; } > "$R/release-notes.md"
-   gh release create v0.1.0-alpha --prerelease --title "Normie Linux 0.1.0 alpha" --notes-file "$R/release-notes.md" "$R/Normie-Linux-0.1.0-alpha-x86_64.iso.sha256" "$R/Normie-Linux-0.1.0-alpha-packages.txt" "$R/BUILD-INFO.txt"
+   git tag -a "v$VER" COMMIT -m "Normie Linux $VER"
+   git push origin "v$VER"
+   SUM=$(cut -d' ' -f1 "$R/$NAME.iso.sha256")
+   { printf '## Download the ISO (about 5 GB)\n\n- SourceForge: https://sourceforge.net/projects/%s/files/%s/\n- Internet Archive: https://archive.org/details/%s\n\nSHA-256 of `%s.iso`:\n\n`%s`\n\n' "$SFPROJECT" "$VER" "$IAID" "$NAME" "$SUM"; cat docs/ALPHA-NOTES.md; } > "$R/release-notes.md"
+   gh release create "v$VER" --prerelease --title "Normie Linux $VER" --notes-file "$R/release-notes.md" "$R/$NAME.iso.sha256" "$R/$NAME-packages.txt" "$R/BUILD-INFO.txt"
    ```
 
-   Replace `COMMIT` with the commit from `BUILD-INFO.txt`.
-7. Do one download from each place, check the checksum, and boot it.
+   Do not attach the ISO itself: GitHub allows about 2 GB per file.
+6. Do one download from each place, check the checksum (`sha256sum`), and boot it.
+
+## Replacing a release you withdraw
+
+Only do this for a release that was never announced. Give the replacement a new version number rather than
+reusing the old one: a reused name means two different files under one checksum.
+
+```
+cd ~/normie-linux
+OLD=0.1.0-alpha
+gh release delete "v$OLD" --cleanup-tag --yes          # the GitHub release and its tag
+git tag -d "v$OLD"                                       # your local copy of the tag
+sftp $SFUSER@frs.sourceforge.net                         # then, at the sftp> prompt, one line each:
+#   cd /home/frs/project/$SFPROJECT
+#   rm $OLD/Normie-Linux-$OLD-x86_64.iso   (and the same for .iso.sha256, BUILD-INFO.txt and -packages.txt)
+#   rmdir $OLD
+#   bye
+cd ~/normie-linux-out/release-$OLD
+./ia --config-file ~/.config/ia.ini delete normie-linux-${OLD//./-} --all
+./ia --config-file ~/.config/ia.ini metadata normie-linux-${OLD//./-} --modify="description:Withdrawn: replaced by a newer release."
+```
+
+The Internet Archive keeps a copy of deleted files in the item's history, and the item page itself stays
+(an empty page that says it was withdrawn). Item pages cannot be fully removed by their owner.
 
 ## Rough size and cost
 

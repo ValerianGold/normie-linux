@@ -1,4 +1,4 @@
-# Normie Linux 0.1.0 alpha
+# Normie Linux 0.1.1 alpha
 
 This is the first public release of Normie Linux: the **recipe** that builds it (this repository) and a ready-made
 **ISO**. The ISO is about 5 GB, too big for a GitHub release, so it is hosted on **SourceForge** and the
@@ -36,8 +36,10 @@ anything important.
   are free, but some countries restrict the patents behind them. Fedora itself does not ship them
   (`docs/DISTRIBUTING-THE-ISO.md`).
 - **No snapshots or rollback.** A one-click restore needs Btrfs snapshots, which are planned.
-- **The tools update only by reinstalling** until the project has its own package repository. The dependency
-  list does update on an installed system, because it is fetched from this repository.
+- **Our own packages** (release files, logo, wallpaper, Plasma look) update through Update & Repair, from the
+  project's own package repository. **The tools themselves** (Update & Repair and its helpers) are not packaged
+  yet, so a fix to them arrives only by reinstalling from a newer ISO. The dependency list updates on an
+  installed system, because it is fetched from this repository.
 - Firmware updates are off. Release upgrades (for example Fedora 45 to 46) are not built yet.
 
 All of this is tracked in `docs/ROADMAP.md`.
