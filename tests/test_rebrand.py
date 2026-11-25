@@ -476,8 +476,44 @@ def read_file(path):
         return fh.read()
 
 
+REPO_FILE_TEMPLATE = """# Normie Linux's own packages.
+# This file is filled in by tools/set-copr-user.sh. Until then the repository is switched off.
+[normie]
+name=Normie Linux own packages
+baseurl=https://download.copr.fedorainfracloud.org/results/OWNER/PROJECT/fedora-$releasever-$basearch/
+type=rpm-md
+skip_if_unavailable=True
+gpgcheck=1
+gpgkey=https://download.copr.fedorainfracloud.org/results/OWNER/PROJECT/pubkey.gpg
+repo_gpgcheck=0
+enabled=0
+"""
+
+
+def repo_file_problems(repo_file, conf_file):
+    """What is wrong with the repository file, given whether a Copr project has been set. [] means fine."""
+    text = read_file(repo_file)
+    problems = []
+    for need in ("gpgcheck=1", "skip_if_unavailable=True", "pubkey.gpg", "$releasever", "$basearch"):
+        if need not in text:
+            problems.append("missing " + need)
+    if os.path.exists(conf_file):                     # a project was set: the file must be filled in and on
+        conf = dict(l.split("=", 1) for l in read_file(conf_file).split() if "=" in l)
+        where = "/results/%s/%s/" % (conf["COPR_OWNER"], conf["COPR_PROJECT"])
+        if text.count(where) != 2:
+            problems.append("addresses do not match copr.conf")
+        if "enabled=1" not in text or "OWNER" in text:
+            problems.append("set but not switched on")
+    elif "enabled=0" not in text or "/results/OWNER/PROJECT/" not in text:
+        problems.append("no project set, so it must be the switched-off template")
+    return problems
+
+
 class SourceRpmsAndCopr(unittest.TestCase):
-    """build-srpms.sh, set-copr-user.sh and publish-packages.sh, with fake rpmbuild and copr-cli."""
+    """build-srpms.sh, set-copr-user.sh and publish-packages.sh, with fake rpmbuild and copr-cli.
+
+    They run on a scratch copy that is put back to the "no Copr project set yet" state first, because the real
+    repository, once the maintainer has run set-copr-user.sh, is in the "set" state."""
     FAKE_COPR = "#!/bin/bash\necho \"copr-cli $*\" >> \"$FAKE_LOG\"\n[ -n \"${FAKE_COPR_FAIL:-}\" ] && exit 1\nexit 0\n"
 
     def setUp(self):
@@ -485,6 +521,9 @@ class SourceRpmsAndCopr(unittest.TestCase):
         self.d, self.repo, self.bin, self.log = d, d + "/repo", d + "/bin", d + "/calls.log"
         self.home = d + "/home"
         shutil.copytree(os.path.join(ROOT, "packaging"), self.repo + "/packaging")
+        if os.path.exists(self.repo + "/packaging/copr.conf"):
+            os.remove(self.repo + "/packaging/copr.conf")
+        write(self.repo + "/packaging/normie-release/normie.repo", REPO_FILE_TEMPLATE)
         os.makedirs(self.repo + "/tools")
         for script in ("build-srpms.sh", "pack-sources.sh", "set-copr-user.sh", "publish-packages.sh"):
             shutil.copy(os.path.join(ROOT, "tools", script), self.repo + "/tools/" + script)
@@ -509,10 +548,19 @@ class SourceRpmsAndCopr(unittest.TestCase):
         return read_file(self.repo + "/packaging/normie-release/normie.repo")
 
     # ---- the repository file that every new system gets
-    def test_the_shipped_repo_file_is_switched_off_until_a_copr_user_is_set(self):
-        text = self.repofile()
-        self.assertIn("enabled=0", text)
-        self.assertIn("/results/OWNER/PROJECT/", text)
+    def test_the_repo_file_in_the_source_matches_whether_a_copr_project_was_set(self):
+        self.assertEqual(repo_file_problems(os.path.join(ROOT, "packaging", "normie-release", "normie.repo"),
+                                            os.path.join(ROOT, "packaging", "copr.conf")), [])
+
+    def test_the_template_starts_switched_off(self):
+        self.assertEqual(repo_file_problems(self.repo + "/packaging/normie-release/normie.repo",
+                                            self.repo + "/packaging/copr.conf"), [])
+        self.assertIn("enabled=0", self.repofile())
+
+    def test_after_set_copr_user_the_file_passes_the_same_check(self):
+        self.run_tool("set-copr-user.sh", "someone")
+        self.assertEqual(repo_file_problems(self.repo + "/packaging/normie-release/normie.repo",
+                                            self.repo + "/packaging/copr.conf"), [])
 
     def test_set_copr_user_fills_in_the_repository_and_switches_it_on(self):
         rc, out = self.run_tool("set-copr-user.sh", "ValerianGold")
