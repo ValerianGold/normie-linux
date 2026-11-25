@@ -3,6 +3,12 @@
 What you may publish **now**: this source repository. What waits: ISO files (Fedora branding must be
 replaced first, `REBRANDING.md`).
 
+## Where to type the commands
+
+Every command on this page is typed in a **terminal opened in the project folder**. Open a terminal and run
+`cd ~/normie-linux` first; a command like `tools/set-github-user.sh` only works from there ("No such file or
+directory" almost always means the terminal was somewhere else). `pwd` shows where you are.
+
 ## One-time setup
 
 1. Create a GitHub account and **turn on two-factor login** (Settings, then Password and authentication).

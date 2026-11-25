@@ -15,6 +15,9 @@
     libreport-fedora            abrt-desktop (crash reporting) requires it.
   docs/REBRANDING.md lists them as the known leftovers; tools/audit-branding.py reports them for review.
 
+  Dropped from the desktop (components/desktops/common.xml lists it for Fedora): mediawriter, the "Fedora
+  Media Writer" app. To put an ISO on a USB stick, Windows users already know balenaEtcher or Ventoy.
+
   Deliberately KEPT, because they are Fedora's repositories and tools rather than branding:
   fedora-repos, fedora-gpg-keys, fedora-third-party, fedora-flathub-remote,
   fedora-workstation-repositories, fedora-appstream-metadata, NetworkManager-config-connectivity-fedora.
@@ -58,5 +61,7 @@
 		<ignore name="plasma-welcome-fedora"/>
 		<ignore name="breeze-icon-theme-fedora"/>
 		<ignore name="fedora-bookmarks"/>
+		<!-- Fedora Media Writer: a Fedora-named app that downloads Fedora images; not wanted here -->
+		<ignore name="mediawriter"/>
 	</packages>
 </image>

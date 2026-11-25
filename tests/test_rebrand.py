@@ -256,6 +256,50 @@ class InstallerProfileBlock(unittest.TestCase):
         self.assertFalse(os.path.exists(d + "/normie-kde.conf"))
 
 
+class LeftoverPathsBlock(unittest.TestCase):
+    """The 'leftover Fedora paths' block of config.sh, run on a scratch folder."""
+
+    def run_block(self, root, profiles="Normie-Full-Live"):
+        block = read("config.sh").split("NORMIE-LINUX CHANGE: leftover Fedora paths in KDE's defaults")[1]
+        block = block.split("NORMIE-LINUX CHANGE: installer profile")[0].split("\n", 1)[1]
+        script = "kiwi_profiles=%s\n%s" % (profiles, "\n".join(l for l in block.splitlines() if not l.startswith("#")))
+        r = subprocess.run(["bash", "-c", script], env=dict(os.environ, NORMIE_FS_ROOT=root), capture_output=True, text=True)
+        return r.returncode, r.stdout + r.stderr
+
+    def make(self):
+        d = tmpdir()
+        write(d + "/usr/share/kde-settings/kde-profile/default/xdg/kscreenlockerrc",
+              "[Greeter][Wallpaper][org.kde.image][General]\nImage=file:///usr/share/wallpapers/Fedora/\n"
+              "PreviewImage=file:///usr/share/wallpapers/Fedora/\n")
+        write(d + "/usr/share/plasma/shells/org.kde.plasma.desktop/contents/updates/00-start-here-2.js",
+              '// start-here-kde-fedora\nwidget.writeConfig("icon", "start-here-kde-fedora");\n')
+        write(d + "/usr/share/plasma/look-and-feel/org.fedoraproject.fedora.desktop/contents/defaults", "Image=Fedora\n")
+        return d
+
+    def test_lock_screen_wallpaper_and_start_icon_are_pointed_at_ours(self):
+        d = self.make()
+        rc, out = self.run_block(d)
+        self.assertEqual(rc, 0, out)
+        lock = read_file(d + "/usr/share/kde-settings/kde-profile/default/xdg/kscreenlockerrc")
+        self.assertIn("Image=file:///usr/share/wallpapers/Normie/", lock)
+        self.assertIn("PreviewImage=file:///usr/share/wallpapers/Normie/", lock)
+        self.assertNotIn("Fedora", lock)
+        js = read_file(d + "/usr/share/plasma/shells/org.kde.plasma.desktop/contents/updates/00-start-here-2.js")
+        self.assertIn('writeConfig("icon", "start-here")', js)
+        self.assertNotIn("fedora", js)
+        # Fedora's own look-and-feel packs are left alone
+        self.assertEqual(read_file(d + "/usr/share/plasma/look-and-feel/org.fedoraproject.fedora.desktop/contents/defaults"), "Image=Fedora\n")
+
+    def test_it_does_nothing_for_other_profiles(self):
+        d = self.make()
+        rc, out = self.run_block(d, profiles="Container")
+        self.assertIn("/usr/share/wallpapers/Fedora/", read_file(d + "/usr/share/kde-settings/kde-profile/default/xdg/kscreenlockerrc"))
+        self.assertIn("start-here-kde-fedora", read_file(d + "/usr/share/plasma/shells/org.kde.plasma.desktop/contents/updates/00-start-here-2.js"))
+
+    def test_fedora_media_writer_is_left_out_of_the_image(self):
+        self.assertIn('<ignore name="mediawriter"/>', read("components/normie/branding.xml"))
+
+
 class BuildRpmsScript(unittest.TestCase):
     """tools/build-rpms.sh with fake rpmbuild and createrepo_c."""
     FAKE_RPMBUILD = r'''#!/bin/bash
@@ -546,6 +590,28 @@ class AuditBranding(unittest.TestCase):
         self.assertIn("MediaWriter.desktop", reviewed)                            # a Fedora-named app
         self.assertIn("          > Comment=Install Fedora to disk", out)         # and the line is shown
         self.assertRegex(out, r"note    \d+ files: installer D-Bus names")
+
+    def test_a_line_that_only_names_a_dbus_or_appstream_id_is_not_listed(self):
+        make_image(self.root, extra={
+            "etc/anaconda/anaconda.conf": "modules = org.fedoraproject.Anaconda.Modules.*\n",
+            "usr/share/applications/liveinst.desktop": "Categories=System;X-Fedora;GNOME;\nIcon=org.fedoraproject.AnacondaInstaller\n",
+            "usr/share/kde-settings/kde-profile/default/xdg/kscreenlockerrc": "Image=file:///usr/share/wallpapers/Fedora/\n"})
+        rc, out = self.run_audit("--root", self.root)
+        self.assertEqual(rc, 0, out)
+        reviewed = "\n".join(l for l in out.splitlines() if l.startswith("REVIEW"))
+        self.assertNotIn("anaconda.conf", reviewed)
+        self.assertNotIn("liveinst.desktop", reviewed)
+        self.assertIn("kscreenlockerrc", reviewed)                              # a real path to a Fedora wallpaper
+        self.assertIn("note    2 files: files whose only mention is a name other software looks for", out)
+
+    def test_fedoras_own_look_and_feel_files_and_our_profile_are_counted_not_listed(self):
+        make_image(self.root, extra={
+            "usr/share/plasma/look-and-feel/org.fedoraproject.fedora.desktop/contents/defaults": "Image=Fedora\n"})
+        rc, out = self.run_audit("--root", self.root)
+        reviewed = "\n".join(l for l in out.splitlines() if l.startswith("REVIEW"))
+        self.assertNotIn("contents/defaults", reviewed)
+        self.assertNotIn("normie-kde.conf", reviewed)                           # it says "Fedora" in a comment
+        self.assertIn("note    1 files: Fedora's own look-and-feel packs", out)
 
     def test_fedoras_publisher_on_the_iso_fails(self):
         make_iso(self.iso, publisher="Fedora Project")

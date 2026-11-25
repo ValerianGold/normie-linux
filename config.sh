@@ -53,6 +53,25 @@ if [[ "$kiwi_profiles" == *"Normie"* ]]; then
 fi
 
 #======================================
+# NORMIE-LINUX CHANGE: leftover Fedora paths in KDE's defaults
+#--------------------------------------
+## Two settings from Fedora's KDE packages still point at Fedora files that are not in a Normie image:
+##  - the lock screen wallpaper, /usr/share/wallpapers/Fedora/  (ours is /usr/share/wallpapers/Normie/)
+##  - an update script that sets the Start button to the icon "start-here-kde-fedora" (we ship "start-here")
+## NORMIE_FS_ROOT exists only so the test suite can run this on a scratch folder.
+if [[ "$kiwi_profiles" == *"Normie"* ]]; then
+	NR="${NORMIE_FS_ROOT:-}"
+	while IFS= read -r f; do
+		sed -i 's#/usr/share/wallpapers/Fedora/#/usr/share/wallpapers/Normie/#g' "$f"
+		echo "Normie: wallpaper path set to Normie in $f"
+	done < <(grep -rlI '/usr/share/wallpapers/Fedora/' "$NR/etc" "$NR/usr/share/kde-settings" 2>/dev/null || true)
+	while IFS= read -r f; do
+		sed -i 's/start-here-kde-fedora/start-here/g' "$f"
+		echo "Normie: Start button icon set to start-here in $f"
+	done < <(grep -rlI 'start-here-kde-fedora' "$NR/usr/share/plasma/shells" "$NR/usr/share/kde-settings" 2>/dev/null || true)
+fi
+
+#======================================
 # NORMIE-LINUX CHANGE: installer profile
 #--------------------------------------
 ## Anaconda (the installer) chooses its settings by matching ID and VARIANT_ID from /etc/os-release against

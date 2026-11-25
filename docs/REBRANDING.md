@@ -49,6 +49,14 @@ settings and `ID_LIKE=fedora`. `tools/audit-branding.py` counts those on `note` 
 Every `REVIEW` line that remains is a file a person could actually see, and the audit prints the lines that
 mention Fedora under it. Those are the ones to fix or take to Fedora's legal list.
 
+After the first audit these were fixed: the lock screen wallpaper path (`/usr/share/wallpapers/Fedora/` in KDE's
+defaults) and an update script that set the Start button to `start-here-kde-fedora` (both rewritten by
+`config.sh`), and Fedora Media Writer (left out of the image). Still listed on purpose: Fedora's own
+look-and-feel packs (see above), Konqueror's bookmarks, NeoChat's default room and the Mac boot file
+`SystemVersion.plist`. Nobody sees those unless they open that particular program or boot a Mac.
+`/boot/grub2/grub.cfg` inside the build folder lists the computer the build ran on (the build's os-prober found
+it); the installer writes a fresh one onto the installed system, so it does not reach users.
+
 ## Known gaps to check on the first built ISO
 
 - The installer (Anaconda) picks its settings by the system's `ID` and `VARIANT_ID`. Ours is `normie`, which no

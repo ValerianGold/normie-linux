@@ -44,6 +44,8 @@ PLACES = ["usr/share/icons", "usr/share/pixmaps", "usr/share/plasma", "usr/share
 # File names that must keep the word (they are identifiers owned by other software)
 NAME_OK = ("org.fedoraproject.AnacondaInstaller",)
 MAX_TEXT = 1_000_000
+# Names other software looks for. A line that mentions Fedora only through one of these is not branding.
+IDENTIFIER = re.compile(rb"org\.fedoraproject\.[A-Za-z0-9_.*-]*|X-Fedora[A-Za-z-]*")
 # Fedora mentions that are expected: identifiers other software looks for, and files nobody sees.
 # (pattern on the path relative to the image root, what to call the group). Anything else is listed.
 EXPECTED = (
@@ -52,6 +54,9 @@ EXPECTED = (
      "AppStream identifiers of fonts and language packs (org.fedoraproject.*)"),
     (re.compile(r"^etc/anaconda/profile\.d/(?!normie)"), "installer profiles for other products and distributions"),
     (re.compile(r"^usr/share/anaconda/gnome/"), "the installer's GNOME welcome screen (not used with KDE)"),
+    (re.compile(r"^usr/share/plasma/look-and-feel/org\.fedoraproject\."),
+     "Fedora's own look-and-feel packs (kept: plasma-workspace requires them; see the package lines above)"),
+    (re.compile(r"^etc/anaconda/profile\.d/normie-"), "our installer profile, copied from Fedora's"),
     (re.compile(r"^boot/config-"), "kernel build settings"),
     (re.compile(r"^usr/lib/os-release$"), "ID_LIKE=fedora, on purpose"),
     (re.compile(r"^usr/share/metainfo/(?!org\.fedoraproject\.(MediaWriter|fedora\.metainfo))[^/]*\.(appdata|metainfo)\.xml$"),
@@ -166,6 +171,16 @@ def walk_places(root):
                     yield os.path.join(d, f)
 
 
+def owner_of(root, rel):
+    """The package that owns a file in the image, or '' when unknown."""
+    try:
+        out = subprocess.run(["rpm", "--root", root, "-qf", "--qf", "%{NAME}\n", "/" + rel],
+                             capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return out.stdout.split()[0] if out.returncode == 0 and out.stdout.split() else ""
+
+
 def expected_group(rel):
     for pattern, why in EXPECTED:
         if pattern.search(rel):
@@ -176,7 +191,7 @@ def expected_group(rel):
 def matching_lines(data, limit=2):
     out = []
     for line in data.decode("utf-8", "replace").splitlines():
-        if re.search("fedora", line, re.I):
+        if re.search(b"fedora", IDENTIFIER.sub(b"", line.encode("utf-8", "replace")), re.I):
             line = line.strip()
             out.append(line if len(line) <= 110 else line[:107] + "...")
             if len(out) == limit:
@@ -206,17 +221,24 @@ def audit_files(root, rep):
             continue
         if b"\0" in data[:2048]:
             continue
-        hits = len(re.findall(rb"fedora", data, re.I))
+        hits = len(re.findall(rb"fedora", IDENTIFIER.sub(b"", data), re.I))
         if hits:
             if group:
                 expected[group] = expected.get(group, 0) + 1
             else:
                 texts[rel] = hits
                 lines[rel] = matching_lines(data)
+        elif re.search(rb"fedora", data, re.I):
+            why = "files whose only mention is a name other software looks for (org.fedoraproject.*, X-Fedora)"
+            expected[why] = expected.get(why, 0) + 1
+    def owned(rel):
+        who = owner_of(root, rel)
+        return f"   [package: {who}]" if who else ""
+
     for rel in sorted(named):
-        rep.review(f"file named for Fedora: /{rel}")
+        rep.review(f"file named for Fedora: /{rel}{owned(rel)}")
     for rel, n in sorted(texts.items())[:80]:
-        rep.review(f"mentions Fedora ({n}x): /{rel}")
+        rep.review(f"mentions Fedora ({n}x): /{rel}{owned(rel)}")
         for line in lines[rel]:
             rep.detail(line)
     if len(texts) > 80:
