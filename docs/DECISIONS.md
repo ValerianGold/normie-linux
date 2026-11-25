@@ -132,3 +132,15 @@ hands it to KIWI (not copied into the image, unsigned packages accepted for this
 Chosen over a public repository because it works today with no accounts or keys, and over overlay files because
 the package database must say Normie, not Fedora. Cost: installed systems do not receive updates to these packages
 until the public repository (M3) exists.
+
+## D-18 RPM Fusion Free codecs stay in the Full ISO: DECIDED (2026-11-24, maintainer)
+The Full ISO contains about 15 packages from RPM Fusion Free (x264, x265, libde265, vvenc, aptX, the "freeworld"
+GStreamer, FFmpeg and VA-API pieces) so that video and audio work out of the box. Their licences are free; Fedora
+leaves them out because of software patents, which removing Fedora's name does not change. The maintainer
+accepted that on purpose and can reverse it: the safe alternative is an ISO without them and an Update & Repair
+step that installs them on the user's own computer. `tools/audit-branding.py` lists them. Not legal advice.
+
+## D-19 Fedora's legal list is recommended, not required: DECIDED
+The rebrand removes Fedora's trademarks and replaces them (D-16), which is what Fedora's guidelines ask of a
+derivative that is not called Fedora. Asking the list about the few open points (kept `ID_LIKE=fedora` and
+`%fedora`, packages whose names contain Fedora) is a precaution and does not gate publishing.

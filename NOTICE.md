@@ -18,8 +18,8 @@ under Fedora's name and branding. Normie Linux therefore replaces the branding
 packages inherited from Fedora (`fedora-release*`, `fedora-logos`, Fedora's wallpapers
 and Plasma look) with its own (`packaging/`, see `docs/REBRANDING.md`). It still says
 that it is *based on* Fedora, uses Fedora's package repositories, and keeps `ID_LIKE=fedora`
-so Fedora's software recognises it. **Before publishing any Normie Linux ISO** the result must be
-checked on a built image and reviewed by Fedora's legal list (Milestone 6 in `docs/ROADMAP.md`).
+so Fedora's software recognises it. **Before publishing any Normie Linux ISO** the result is
+checked on a built image (Milestone 6 in `docs/ROADMAP.md`); asking Fedora's legal list to look at it is recommended, not required.
 Publishing only this source repository is fine now.
 
 ## The Normie Linux logo

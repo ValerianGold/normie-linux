@@ -3,7 +3,7 @@
 Status: **built in the source (stages R0 to R3), not yet checked on a built ISO.** The recipe now builds
 the image with our own release files, logos, wallpaper and Plasma look instead of Fedora's. What is left is
 to build it, boot it, run the audit (`tools/audit-branding.py`) and fix what it finds (R3), then ask Fedora's
-legal list (R4) before any ISO is published (R5). Publishing this source repository is fine now.
+legal list (R4, recommended but not required) before an ISO is published (R5). Publishing this source repository is fine now.
 (Not legal advice; Fedora's own legal list is the place to confirm the open points below.)
 
 ## How it works now
@@ -101,6 +101,10 @@ screen, networking and the rest.
 | Our workload | Higher: we copy and maintain the presets and macros each release (Fedora's are MIT-licensed) | Lower |
 | Recommended | **Yes, unless Fedora's legal list says B is fine** | Only with written confirmation |
 
+Fedora's own guidelines (as read in November 2026; Fedora's site blocked automated reading, so confirm them yourself)
+let anyone distribute a modified Fedora under another name once Fedora's trademarks are removed, without asking.
+Asking the legal list (`legal@lists.fedoraproject.org`) is therefore a precaution about the few open points, not a gate.
+
 ## Inventory results (R0 is done)
 
 From an installed Normie system (Fedora 45 KDE base, Plasma 6.8.3). Sorting is my judgment of Fedora's
@@ -147,7 +151,7 @@ URLs, `DEFAULT_HOSTNAME`; remove `REDHAT_BUGZILLA_*`; keep `ID_LIKE=fedora`, `VE
 4. **R3, swap them into the image.** **Done in the source** (`components/normie/branding.xml`). Still to do:
    build, then run `python3 tools/audit-branding.py` and look at what it prints; boot the ISO and look at
    the boot menu, the login screen, the installer and the desktop.
-5. **R4, ask Fedora's legal list to review** the audit result before publishing.
+5. **R4, ask Fedora's legal list to review** the audit result (recommended, not required).
 6. **R5, publish** the ISO.
 
 ## What is already done

@@ -8,7 +8,7 @@ Each milestone ends with something you can boot and check. Status as of the firs
 - [ ] **M3. Our own package repository** (Copr is the easiest start). Needed for two things at once: (a) the Update & Repair tools update on installed systems without a reinstall (lane 3 in `ROLLING-OUT-FIXES.md`), (b) a home for `normie-release` and friends (M6). First package: `normie-tools` (the contents of `root/`).
 - [ ] **M4. Update & Repair.** *(v0 works on real hardware.)* Missing: Btrfs snapshots with a one-click restore. That is also the prerequisite for turning firmware updates on. The Start menu pin moves into our own Plasma look-and-feel package (D-12, M6).
 - [ ] **M5. NVIDIA hardening.** Works on one real card (RTX 3080, current branch). Still untested: the legacy 580xx branch, Secure Boot enrollment, laptops with two GPUs, installs without internet.
-- [ ] **M6. Independence from Fedora's branding.** Stages R0 to R5 in `REBRANDING.md`. *(R0 to R3 are done in the source: our own release, logo, wallpaper and Plasma look packages, with the Start menu pin.)* Left: build it, run `tools/audit-branding.py`, boot it and fix what shows up, then ask Fedora's legal list (R4). Publishing any ISO waits for this.
+- [ ] **M6. Independence from Fedora's branding.** Stages R0 to R5 in `REBRANDING.md`. *(R0 to R3 are done in the source: our own release, logo, wallpaper and Plasma look packages, with the Start menu pin.)* Left: build it, run `tools/audit-branding.py`, boot it and fix what shows up, then, if you want a second opinion, ask Fedora's legal list (R4, recommended but not required). Publishing any ISO waits for the audit and a VM boot.
 - [ ] **M7. Fedora release upgrades (45 to 46).** Gated by a release-channel file, per-release package lists and readiness checks (D-14).
 
 Not milestones yet, but not forgotten: Windows-app front end (Bottles or similar), printing and scanning
@@ -23,4 +23,4 @@ checks, NTFS and exFAT drives, Bluetooth.
 - [ ] Confirm in Discover on a fresh install: RPM Fusion and Flathub Beta sources are enabled and the experimental apps appear.
 - [ ] Source on GitHub (`docs/PUBLISHING.md`), with `tools/set-github-user.sh` run first.
 - [x] Alpha notes state plainly: source only, no snapshots, tools update only by reinstalling until M3 (`docs/ALPHA-NOTES.md`).
-- [ ] For an ISO release rather than source only: finish M6 (the audit, a VM boot, Fedora's legal list). M3 is wanted too, so installed systems get updates to our own packages. How to host the ISO: `DISTRIBUTING-THE-ISO.md`.
+- [ ] For an ISO release rather than source only: finish M6 (the audit, a VM boot; Fedora's legal list is optional). M3 is wanted too, so installed systems get updates to our own packages. How to host the ISO: `DISTRIBUTING-THE-ISO.md`.

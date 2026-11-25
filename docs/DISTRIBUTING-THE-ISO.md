@@ -38,7 +38,8 @@ copy of the ISO and its checksum yourself. Many people use two places so one goi
 
 - The rebrand is checked: `python3 tools/audit-branding.py` shows no `FAIL` and you have read every `REVIEW`
   line, and you have booted the ISO and looked at the boot menu, login screen, installer and desktop.
-- Fedora's legal list has seen the result (stage R4). This is the open question in `REBRANDING.md`.
+- Optional but wise: Fedora's legal list has seen the result (stage R4, `legal@lists.fedoraproject.org`). It is not a
+  requirement; see `REBRANDING.md` for what is and is not open.
 - **Licences.** The ISO contains GPL software, so people who receive it must be able to get the matching
   source. Fedora publishes the source of its packages; keep the exact package list (item 3) and the commit the
   ISO was built from (`BUILD-INFO.txt` next to the ISO), and say in the release notes where the source comes from.

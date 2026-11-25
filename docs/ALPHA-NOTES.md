@@ -29,7 +29,7 @@ anything important.
 ## Missing or limited
 
 - **No ISO yet.** The rebrand (own system name, logo, wallpaper and Plasma look) is in the recipe but has not been
-  audited on a built image, and the project wants Fedora's legal list to look at it before an ISO is published.
+  audited on a built image, and the project intends to ask Fedora's legal list to look at it (recommended, not required).
 - **No snapshots or rollback.** A one-click restore needs Btrfs snapshots, which are planned.
 - **The tools update only by reinstalling** until the project has its own package repository. The dependency
   list does update on an installed system, because it is fetched from this repository.
