@@ -98,7 +98,7 @@ for prof in want:
 BRANDED = re.compile(r"^(fedora-release(-.*)?|fedora-logos(-.*)?|generic-(release|logos)(-.*)?|f\d+-backgrounds(-.*)?|"
                      r"desktop-backgrounds-kde|plasma-welcome-fedora|"
                      r"breeze-icon-theme-fedora|fedora-bookmarks)$")
-OURS = ("normie-release", "normie-logos", "normie-backgrounds-kde", "normie-lookandfeel")
+OURS = ("normie-release", "normie-logos", "normie-backgrounds-kde", "normie-lookandfeel", "normie-tools")
 if kiwi == "Normie-Linux.kiwi":
     for prof in want:
         if prof not in defined:

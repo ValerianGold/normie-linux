@@ -4,12 +4,12 @@
 #   tools/set-github-user.sh YOUR-USERNAME [REPO-NAME]        (REPO-NAME defaults to normie-linux)
 #
 # It sets, in two files:
-#   root/etc/normie/update.conf   DEPS_LIST_URL  (where installed systems fetch the dependency list)
+#   packaging/normie-tools/files/etc/normie/update.conf   DEPS_LIST_URL  (where installed systems fetch the dependency list)
 #   Normie-Linux.kiwi             <contact>      (the project's public address)
 # It changes nothing else and is safe to run again.
 set -eu
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CONF="$ROOT/root/etc/normie/update.conf"
+CONF="$ROOT/packaging/normie-tools/files/etc/normie/update.conf"
 KIWI="$ROOT/Normie-Linux.kiwi"
 user="${1:-}"
 repo="${2:-normie-linux}"

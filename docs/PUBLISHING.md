@@ -58,7 +58,7 @@ First check the two addresses were set (both lines must show your username, not 
 
 ```
 cd ~/normie-linux
-grep '^DEPS_LIST_URL=' root/etc/normie/update.conf
+grep '^DEPS_LIST_URL=' packaging/normie-tools/files/etc/normie/update.conf
 grep '<contact>' Normie-Linux.kiwi
 ```
 

@@ -33,7 +33,7 @@ class SetGithubUser(unittest.TestCase):
         atexit.register(shutil.rmtree, d, True)
         os.makedirs(f"{d}/tools")
         shutil.copy(SCRIPT, f"{d}/tools/set-github-user.sh")
-        write(f"{d}/root/etc/normie/update.conf", '# comment\nDEPS_LIST_URL=""\nFIRMWARE="no"\n')
+        write(f"{d}/packaging/normie-tools/files/etc/normie/update.conf", '# comment\nDEPS_LIST_URL=""\nFIRMWARE="no"\n')
         write(f"{d}/Normie-Linux.kiwi", "<image><description><contact>TODO-set</contact></description></image>\n")
         return d
 
@@ -44,7 +44,7 @@ class SetGithubUser(unittest.TestCase):
         d = self.make_tree()
         r = self.run_script(d, "valerian-example")
         self.assertEqual(r.returncode, 0, r.stderr)
-        conf = read(f"{d}/root/etc/normie/update.conf")
+        conf = read(f"{d}/packaging/normie-tools/files/etc/normie/update.conf")
         self.assertIn('DEPS_LIST_URL="https://raw.githubusercontent.com/valerian-example/normie-linux/main/dist/normie-deps.list"', conf)
         self.assertIn('FIRMWARE="no"', conf)                      # other settings untouched
         self.assertIn("<contact>https://github.com/valerian-example/normie-linux</contact>", read(f"{d}/Normie-Linux.kiwi"))
@@ -53,33 +53,33 @@ class SetGithubUser(unittest.TestCase):
         d = self.make_tree()
         self.run_script(d, "someone", "my-distro")
         self.run_script(d, "someone", "my-distro")
-        conf = read(f"{d}/root/etc/normie/update.conf")
+        conf = read(f"{d}/packaging/normie-tools/files/etc/normie/update.conf")
         self.assertEqual(conf.count("DEPS_LIST_URL="), 1)
         self.assertIn("/someone/my-distro/main/", conf)
 
     def test_bad_input_changes_nothing(self):
         for bad in ("", "has space", "--help", "a;b", "$(x)", "-leading", "trailing-", "x" * 40):
             d = self.make_tree()
-            before = read(f"{d}/root/etc/normie/update.conf"), read(f"{d}/Normie-Linux.kiwi")
+            before = read(f"{d}/packaging/normie-tools/files/etc/normie/update.conf"), read(f"{d}/Normie-Linux.kiwi")
             r = self.run_script(d, bad)
             self.assertEqual(r.returncode, 2, bad)
-            self.assertEqual((read(f"{d}/root/etc/normie/update.conf"), read(f"{d}/Normie-Linux.kiwi")), before, bad)
+            self.assertEqual((read(f"{d}/packaging/normie-tools/files/etc/normie/update.conf"), read(f"{d}/Normie-Linux.kiwi")), before, bad)
 
     def test_bad_repo_name_changes_nothing(self):
         d = self.make_tree()
-        before = read(f"{d}/root/etc/normie/update.conf")
+        before = read(f"{d}/packaging/normie-tools/files/etc/normie/update.conf")
         self.assertEqual(self.run_script(d, "someone", "bad/repo").returncode, 2)
-        self.assertEqual(read(f"{d}/root/etc/normie/update.conf"), before)
+        self.assertEqual(read(f"{d}/packaging/normie-tools/files/etc/normie/update.conf"), before)
 
     def test_the_url_it_writes_passes_the_clients_own_url_rule(self):
         # normie-update only accepts https:// and normie-remind extracts it with a pattern; use the real pattern
         d = self.make_tree()
         self.run_script(d, "valerian-example")
-        remind = read(os.path.join(ROOT, "root", "usr", "libexec", "normie", "normie-remind"))
+        remind = read(os.path.join(ROOT, "packaging", "normie-tools", "files", "usr", "libexec", "normie", "normie-remind"))
         self.assertIn('https://', remind)
         out = subprocess.run(
             ["sed", "-n", 's#^DEPS_LIST_URL="\\{0,1\\}\\(https://[^"[:space:]]*\\)"\\{0,1\\}[[:space:]]*$#\\1#p',
-             f"{d}/root/etc/normie/update.conf"], capture_output=True, text=True).stdout.strip()
+             f"{d}/packaging/normie-tools/files/etc/normie/update.conf"], capture_output=True, text=True).stdout.strip()
         self.assertEqual(out, "https://raw.githubusercontent.com/valerian-example/normie-linux/main/dist/normie-deps.list")
 
 

@@ -7,7 +7,7 @@ There are three lanes. Which one a fix uses decides how fast it arrives.
 |---|---|---|---|
 | 1. Dependencies | A missing library or package | You edit the package list on GitHub. Machines pick it up through Update & Repair | **No** (once `DEPS_LIST_URL` is set) |
 | 2. Fedora, RPM Fusion, Flathub, NVIDIA | Upstream updates and bug fixes | Update & Repair, straight from those projects | No |
-| 3. Our own tools and branding | The scripts, window, settings, icons | Our own package repository (ROADMAP M3, `PACKAGE-REPOSITORY.md`). Branding packages: yes, on systems installed from a build that has the repository file. The tools themselves: not packaged yet | Branding: no, once set up. Tools: **yes, today** |
+| 3. Our own tools and branding | The scripts, window, settings, icons | Our own package repository (ROADMAP M3, `PACKAGE-REPOSITORY.md`). Branding and tools are both packages (`normie-logos`, `normie-tools` and so on): yes, on systems installed from a build that has the repository file | No, once set up |
 
 ## Worked example (lane 1)
 
@@ -41,7 +41,7 @@ Nobody has to open a terminal, and nothing is reinstalled.
   (`/var/lib/normie/deps-applied`). A different fingerprint means a fix is waiting.
 - It announces each new version **once**, and never before Update & Repair has applied a list at least once.
 - It changes nothing itself. Only the button installs, and only names that pass the strict filter in
-  `root/usr/libexec/normie/normie-lib.sh`.
+  `packaging/normie-tools/files/usr/libexec/normie/normie-lib.sh`.
 - Privacy: this is one small HTTPS request a day to GitHub, which can see the machine's IP address as it
   can for any visitor. Nothing else is sent. Remove `DEPS_LIST_URL` from `update.conf` to turn it off.
 
@@ -60,4 +60,4 @@ from a separate repository, D-10). It can be added later without changing the de
 ## Before the first ISO leaves your hands
 
 1. Run `tools/set-github-user.sh YOUR-USERNAME` so installed systems know where to fetch the list.
-2. Remember lane 3: until M3, a bug in the tools themselves means a new ISO.
+2. Remember lane 3: a bug in the tools themselves is fixed in `packaging/normie-tools/files/`, then the `Release:` number in `normie-tools.spec` goes up and `tools/publish-packages.sh` sends it. Installed systems get it from Update & Repair; nobody reinstalls.

@@ -81,7 +81,7 @@ class ImageDescription(unittest.TestCase):
         for profile in ("Normie-Live", "Normie-Full-Live"):
             named, _, boot, _ = packages_for(profile)
             self.assertIn("normie-release", boot, profile)
-            for n in ("normie-logos", "normie-backgrounds-kde", "normie-lookandfeel"):
+            for n in ("normie-logos", "normie-backgrounds-kde", "normie-lookandfeel", "normie-tools"):
                 self.assertIn(n, named, profile)
 
     def test_no_fedora_branded_package_is_installed(self):
@@ -173,7 +173,7 @@ class ImageDescription(unittest.TestCase):
         self.assertIn("fedora-logos", r.stdout)
 
     def test_check_packages_counts_our_own_packages_as_available(self):
-        # run it as a program with an empty list of online packages: only our four may be found
+        # run it as a program with an empty list of online packages: only our five may be found
         d = tmpdir()
         avail = d + "/avail.txt"
         write(avail, "filesystem.x86_64\n")
@@ -370,7 +370,7 @@ mkdir -p "$last/repodata"; echo meta > "$last/repodata/repomd.xml"
         self.bin = d + "/bin"
         self.log = d + "/calls.log"
         self.local = d + "/local-repo"
-        shutil.copytree(os.path.join(ROOT, "packaging"), self.repo + "/packaging")
+        shutil.copytree(os.path.join(ROOT, "packaging"), self.repo + "/packaging", symlinks=True)
         os.makedirs(self.repo + "/tools")
         for script in ("build-rpms.sh", "pack-sources.sh"):
             shutil.copy(os.path.join(ROOT, "tools", script), self.repo + "/tools/" + script)
@@ -394,15 +394,15 @@ mkdir -p "$last/repodata"; echo meta > "$last/repodata/repomd.xml"
         rc, out = self.run_script()
         self.assertEqual(rc, 0, out)
         rpms = sorted(f for f in os.listdir(self.local) if f.endswith(".rpm"))
-        self.assertEqual(len(rpms), 4, rpms)
+        self.assertEqual(len(rpms), 5, rpms)
         self.assertTrue(os.path.exists(self.local + "/repodata/repomd.xml"))
-        self.assertEqual(len([c for c in self.calls() if c.startswith("-bb")]), 4)
+        self.assertEqual(len([c for c in self.calls() if c.startswith("-bb")]), 5)
         self.assertEqual(len([c for c in self.calls() if c.startswith("createrepo_c")]), 1)
 
     def test_each_package_is_built_from_its_packed_sources(self):
         self.run_script()
         builds = [c for c in self.calls() if c.startswith("-bb")]
-        self.assertEqual(len(builds), 4)
+        self.assertEqual(len(builds), 5)
         for c in builds:
             self.assertRegex(c, r"_sourcedir \S*/normie-rpms-\w+/sources")     # a folder holding the tarballs
 
@@ -433,7 +433,7 @@ mkdir -p "$last/repodata"; echo meta > "$last/repodata/repomd.xml"
         open(self.log, "w").close()
         rc, out = self.run_script("--if-needed")
         self.assertEqual(rc, 0, out)
-        self.assertEqual(len([c for c in self.calls() if c.startswith("-bb")]), 4)
+        self.assertEqual(len([c for c in self.calls() if c.startswith("-bb")]), 5)
 
     def test_if_needed_rebuilds_when_the_project_address_changes(self):
         self.run_script()
@@ -520,7 +520,7 @@ class SourceRpmsAndCopr(unittest.TestCase):
         d = tmpdir()
         self.d, self.repo, self.bin, self.log = d, d + "/repo", d + "/bin", d + "/calls.log"
         self.home = d + "/home"
-        shutil.copytree(os.path.join(ROOT, "packaging"), self.repo + "/packaging")
+        shutil.copytree(os.path.join(ROOT, "packaging"), self.repo + "/packaging", symlinks=True)
         if os.path.exists(self.repo + "/packaging/copr.conf"):
             os.remove(self.repo + "/packaging/copr.conf")
         write(self.repo + "/packaging/normie-release/normie.repo", REPO_FILE_TEMPLATE)
@@ -596,9 +596,9 @@ class SourceRpmsAndCopr(unittest.TestCase):
         rc, out = self.run_tool("build-srpms.sh")
         self.assertEqual(rc, 0, out)
         found = sorted(os.listdir(self.home + "/normie-linux-out/srpms"))
-        self.assertEqual(len(found), 4, found)
+        self.assertEqual(len(found), 5, found)
         self.assertTrue(all(f.endswith(".src.rpm") for f in found))
-        self.assertEqual(len([c for c in self.calls() if c.startswith("-bs")]), 4)
+        self.assertEqual(len([c for c in self.calls() if c.startswith("-bs")]), 5)
 
     def test_build_srpms_without_rpmbuild_gives_the_install_command(self):
         lean = self.d + "/lean"
@@ -631,7 +631,7 @@ class SourceRpmsAndCopr(unittest.TestCase):
         rc, out = self.run_tool("publish-packages.sh")
         self.assertEqual(rc, 0, out)
         sent = [c for c in self.calls() if c.startswith("copr-cli")]
-        self.assertEqual(len(sent), 4, sent)
+        self.assertEqual(len(sent), 5, sent)
         for c in sent:
             self.assertRegex(c, r"^copr-cli build someone/normie-linux \S+\.src\.rpm$")
 
@@ -841,7 +841,7 @@ class AuditBranding(unittest.TestCase):
         make_image(self.root)
         bin_dir = self.d + "/bin"
         write(bin_dir + "/rpm", "#!/bin/bash\ncase \"$*\" in\n*VENDOR*) printf 'x264-libs\\tRPM Fusion\\nbash\\tFedora Project\\n';;\n"
-              "*) printf 'x264-libs\\nbash\\nnormie-release\\nnormie-logos\\nnormie-backgrounds-kde\\nnormie-lookandfeel\\n';;\nesac\n", 0o755)
+              "*) printf 'x264-libs\\nbash\\nnormie-release\\nnormie-logos\\nnormie-backgrounds-kde\\nnormie-lookandfeel\\nnormie-tools\\n';;\nesac\n", 0o755)
         r = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "audit-branding.py"), "--root", self.root],
                            capture_output=True, text=True, env=dict(os.environ, NORMIE_OUT=tmpdir(), PATH=bin_dir + ":" + os.environ["PATH"]))
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)

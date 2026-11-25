@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Tests for root/usr/libexec/normie/normie-update using fake commands.
+Tests for packaging/normie-tools/files/usr/libexec/normie/normie-update using fake commands.
 Nothing here touches the real system.   Run:  python3 -m unittest discover -s tests -v
 """
 import atexit
@@ -12,8 +12,8 @@ import tempfile
 import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-UPDATE = os.path.join(HERE, "..", "root", "usr", "libexec", "normie", "normie-update")
-LIB = os.path.abspath(os.path.join(HERE, "..", "root", "usr", "libexec", "normie", "normie-lib.sh"))
+UPDATE = os.path.join(HERE, "..", "packaging", "normie-tools", "files", "usr", "libexec", "normie", "normie-update")
+LIB = os.path.abspath(os.path.join(HERE, "..", "packaging", "normie-tools", "files", "usr", "libexec", "normie", "normie-lib.sh"))
 
 
 def names_hash(names):
@@ -315,7 +315,7 @@ class UpdateTests(unittest.TestCase):
 
 
 class SourcesScript(unittest.TestCase):
-    SCRIPT = os.path.join(HERE, "..", "root", "usr", "libexec", "normie", "normie-sources")
+    SCRIPT = os.path.join(HERE, "..", "packaging", "normie-tools", "files", "usr", "libexec", "normie", "normie-sources")
 
     def make(self, remotes="", installed=(), dnf_fails=False, flatpak_fails=False, have_flatpak=True,
              beta_fails=False, conf="", third_party=None, third_party_fails=False):
@@ -479,7 +479,7 @@ esac
         self.assertIn("skipping Flathub", out)
 
     def test_services_are_enabled_and_cannot_block_the_login_screen(self):
-        root = os.path.join(HERE, "..", "root")
+        root = os.path.join(HERE, "..", "packaging", "normie-tools", "files")
         links = {
             "etc/systemd/system/multi-user.target.wants/normie-sources.service": "/usr/lib/systemd/system/normie-sources.service",
             "etc/systemd/user/timers.target.wants/normie-remind.timer": "/usr/lib/systemd/user/normie-remind.timer",
@@ -513,7 +513,7 @@ class NoSnap(unittest.TestCase):
 
 
 class Reminder(unittest.TestCase):
-    SCRIPT = os.path.join(HERE, "..", "root", "usr", "libexec", "normie", "normie-remind")
+    SCRIPT = os.path.join(HERE, "..", "packaging", "normie-tools", "files", "usr", "libexec", "normie", "normie-remind")
     DAY = 86400
     T0 = 1_800_000_000
 
@@ -661,7 +661,7 @@ exit 0
         self.assertEqual(self.calls(d), "")      # nothing valid in it: ignored, not announced, not run
 
     def test_timer_is_not_active_in_the_live_session(self):
-        unit = os.path.join(HERE, "..", "root", "usr", "lib", "systemd", "user", "normie-remind.service")
+        unit = os.path.join(HERE, "..", "packaging", "normie-tools", "files", "usr", "lib", "systemd", "user", "normie-remind.service")
         with open(unit) as fh:
             self.assertIn("ConditionPathExists=!/run/initramfs/livedev", fh.read())
 

@@ -9,8 +9,7 @@ users never have to open a terminal.
 > graphics drivers (tested on one real machine so far). **The ISO is on the
 > [release page](https://github.com/ValerianGold/normie-linux/releases)**, hosted on SourceForge and the
 > Internet Archive because it is too big for GitHub; check the SHA-256 checksum after downloading. No snapshots or
-> rollback yet, and the tools themselves (as opposed to our logo, wallpaper and release files, which update through Update & Repair) update only by reinstalling until they are packaged
-> ([docs/ROADMAP.md](docs/ROADMAP.md)). Not for anything important.
+> rollback yet, and installs from the first, 0.1.0, files cannot receive updates ([docs/ROADMAP.md](docs/ROADMAP.md)). Not for anything important.
 >
 > What works, what is untested and what is missing: [docs/ALPHA-NOTES.md](docs/ALPHA-NOTES.md).
 
@@ -45,7 +44,8 @@ tools/build.sh                      # builds the Normie-Live ISO (Milestone 1)
 | `Normie-Linux.kiwi` | The Normie Linux image description. Start reading here. |
 | `components/normie/` | Our own KIWI files: `profiles.xml` (what can be built) and `deps.xml` (dependency set). |
 | `repositories/rpmfusion.xml`, `normie-local.xml` | RPM Fusion and our own build-time package repository (ours). `core.xml` is Fedora's. |
-| `root/` | Files copied into the ISO as-is, including the Update & Repair tools (`root/usr/libexec/normie/`). |
+| `root/` | Files copied into the ISO as-is (only build-time files now: the boot-partition fix and the build record). |
+| `packaging/normie-tools/` | The Update & Repair tools as a package (`files/usr/libexec/normie/`), so fixes reach installed systems. |
 | `packaging/` | Our own packages: release files, logos, wallpaper, Plasma look. They replace Fedora's branding packages. |
 | `tools/` | `build.sh`, `build-rpms.sh`, `validate-kiwi.py`, `check-packages.py`, `solve-check.py`, `export-deps.py`, `audit-branding.py`, `try-iso.sh`. |
 | `dist/` | `normie-deps.list`: the dependency list the Update & Repair button fetches from GitHub. |

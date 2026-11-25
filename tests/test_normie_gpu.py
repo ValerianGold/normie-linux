@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Tests for root/usr/libexec/normie/normie-gpu using a fake PCI bus and fake commands.
+Tests for packaging/normie-tools/files/usr/libexec/normie/normie-gpu using a fake PCI bus and fake commands.
 Nothing here touches the real system.   Run:  python3 -m unittest discover -s tests -v
 """
 import atexit
@@ -13,7 +13,7 @@ import tempfile
 import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-GPU = os.path.join(HERE, "..", "root", "usr", "libexec", "normie", "normie-gpu")
+GPU = os.path.join(HERE, "..", "packaging", "normie-tools", "files", "usr", "libexec", "normie", "normie-gpu")
 
 STUBS = {
     "lspci": '#!/bin/sh\n# usage: lspci -s SLOT -mm\ngrep "^$2|" "$FAKE/lspci" | cut -d"|" -f2-\n',

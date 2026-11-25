@@ -153,3 +153,11 @@ key. `normie-release` ships `/etc/yum.repos.d/normie.repo` (switched on by `tool
 `skip_if_unavailable=True` keeps a missing repository from breaking updates. Systems installed from the 0.1.0 alpha ISO
 have no repository file and need a reinstall. Chosen over our own server because it costs nothing and needs no
 key handling; the cost is depending on Fedora's infrastructure, which `PACKAGE-REPOSITORY.md` says plainly.
+
+## D-21 The tools are a package, `normie-tools`: DECIDED
+The Update & Repair scripts, window, services and launchers moved from the `root/` overlay into
+`packaging/normie-tools/` and are installed by the RPM `normie-tools` (enable links for the services included), so a
+fix reaches installed systems through the same Copr update as the branding packages. `root/` keeps only build-time
+files. The package depends on `python3-pyqt6`, `polkit`, `curl`, `flatpak`, `pciutils` and `mokutil`. `/etc` files are
+`%config(noreplace)`. The dependency-name list is not affected: the exporter skips `normie-*` names. Chosen over
+fetching scripts from GitHub because the package is signed and verified by dnf.

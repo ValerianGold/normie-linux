@@ -93,7 +93,7 @@ class ReleaseSteps(unittest.TestCase):
 
     def test_release_steps_check_the_two_addresses_first(self):
         text = read("docs", "PUBLISHING.md")
-        self.assertIn("grep '^DEPS_LIST_URL=' root/etc/normie/update.conf", text)
+        self.assertIn("grep '^DEPS_LIST_URL=' packaging/normie-tools/files/etc/normie/update.conf", text)
         self.assertIn("<contact>", text)
 
     def test_the_notes_file_named_in_the_release_command_exists(self):

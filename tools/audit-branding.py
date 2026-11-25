@@ -35,7 +35,7 @@ KEEP = re.compile(r"^(fedora-repos(-.*)?|fedora-gpg-keys|fedora-third-party|fedo
                   r"fedora-workstation-repositories|fedora-appstream-metadata|NetworkManager-config-connectivity-fedora)$")
 # Fedora's own packages require these (at exact versions), so they stay installed; reported for review
 TOLERATED = ("plasma-lookandfeel-fedora", "libreport-fedora")
-OURS = ("normie-release", "normie-logos", "normie-backgrounds-kde", "normie-lookandfeel")
+OURS = ("normie-release", "normie-logos", "normie-backgrounds-kde", "normie-lookandfeel", "normie-tools")
 # Branding places searched for the word "Fedora" (relative to the image root)
 PLACES = ["usr/share/icons", "usr/share/pixmaps", "usr/share/plasma", "usr/share/wallpapers", "usr/share/backgrounds",
           "usr/share/anaconda", "usr/share/plymouth", "usr/share/sddm", "usr/share/kde-settings", "usr/share/applications",

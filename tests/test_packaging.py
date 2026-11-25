@@ -181,9 +181,9 @@ class EverySpec(unittest.TestCase):
         for d in cls._cleanup:
             shutil.rmtree(d, ignore_errors=True)
 
-    def test_there_are_exactly_the_four_packages(self):
+    def test_there_are_exactly_the_five_packages(self):
         self.assertEqual(sorted(s.name for s in self.specs),
-                         ["normie-backgrounds-kde", "normie-logos", "normie-lookandfeel", "normie-release"])
+                         ["normie-backgrounds-kde", "normie-logos", "normie-lookandfeel", "normie-release", "normie-tools"])
 
     def test_each_folder_is_named_after_its_package(self):
         for s in self.specs:
@@ -246,6 +246,8 @@ class EverySpec(unittest.TestCase):
                                       "/usr/share/dnf/plugins/copr.vendor.conf",
                                       "/etc/yum.repos.d/normie.repo"}}   # the Copr web address
         for s in self.specs:
+            if s.name == "normie-tools":
+                continue          # the tools talk about Fedora's servers, repositories and tools by name (checked below)
             buildroot, _, _ = self.built[s.name]
             for path in tree(buildroot):
                 full = buildroot + path
@@ -462,7 +464,7 @@ class ArtworkPackages(unittest.TestCase):
         js = read(lroot, "usr/share/plasma/look-and-feel/org.normielinux.normie.desktop/contents/plasmoidsetupscripts/org.kde.plasma.kickoff.js")
         self.assertIn('writeConfig("icon", "start-here")', js)
         self.assertIn("normie-update.desktop", js)
-        self.assertTrue(os.path.exists(os.path.join(ROOT, "root", "usr", "share", "applications", "normie-update.desktop")))
+        self.assertTrue(os.path.exists(os.path.join(ROOT, "packaging", "normie-tools", "files", "usr", "share", "applications", "normie-update.desktop")))
 
     def test_update_and_repair_is_also_pinned_on_the_taskbar(self):
         _, lroot, _, _ = self.built["normie-lookandfeel"]
@@ -492,6 +494,69 @@ class Artwork(unittest.TestCase):
             for f in files:
                 self.assertNotIn("fedora", f.lower(), os.path.join(d, f))
 
+
+
+class ToolsPackage(unittest.TestCase):
+    """normie-tools: the Update & Repair tools as a package, so a fix reaches installed systems by update."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.spec = Spec(os.path.join(PKG, "normie-tools", "normie-tools.spec"))
+        cls.root, _, cls.work = cls.spec.install()
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.work, ignore_errors=True)
+
+    def test_the_scripts_are_executable_and_the_library_is_not(self):
+        d = os.path.join(self.root, "usr/libexec/normie")
+        for name in ("normie-update", "normie-update-gui", "normie-sources", "normie-remind", "normie-gpu"):
+            self.assertTrue(os.access(os.path.join(d, name), os.X_OK), name)
+        self.assertFalse(os.access(os.path.join(d, "normie-lib.sh"), os.X_OK))      # sourced, never run
+
+    def test_the_services_are_enabled_by_the_package_itself(self):
+        links = {"etc/systemd/system/multi-user.target.wants/normie-sources.service":
+                     "/usr/lib/systemd/system/normie-sources.service",
+                 "etc/systemd/user/timers.target.wants/normie-remind.timer":
+                     "/usr/lib/systemd/user/normie-remind.timer"}
+        for rel, target in links.items():
+            p = os.path.join(self.root, rel)
+            self.assertTrue(os.path.islink(p), rel)
+            self.assertEqual(os.readlink(p), target)
+            self.assertTrue(os.path.exists(self.root + target), target)
+
+    def test_settings_and_desktop_files_in_etc_are_kept_when_the_user_changed_them(self):
+        for path in ("/etc/normie/update.conf", "/etc/skel/Desktop/normie-update.desktop",
+                     "/etc/xdg/autostart/normie-first-run.desktop"):
+            self.assertIn(f"%config(noreplace) {path}", "\n".join(self.spec.sections["files"]).replace("%{_sysconfdir}", "/etc"))
+
+    def test_what_the_desktop_files_and_polkit_name_is_in_the_package(self):
+        text = ""
+        for rel in ("usr/share/applications/normie-update.desktop", "etc/skel/Desktop/normie-update.desktop",
+                    "etc/xdg/autostart/normie-first-run.desktop", "usr/share/polkit-1/actions/org.normielinux.update.policy",
+                    "usr/lib/systemd/system/normie-sources.service", "usr/lib/systemd/user/normie-remind.service"):
+            text += read(self.root, rel)
+        for path in sorted(set(re.findall(r"/usr/libexec/normie/[\w.-]+", text))):
+            self.assertTrue(os.path.exists(self.root + path), f"{path} is named but not installed")
+
+    def test_it_asks_for_what_the_window_and_scripts_need(self):
+        need = set(self.spec.tag("Requires"))
+        for pkg in ("python3-pyqt6", "polkit", "curl", "flatpak", "pciutils", "mokutil"):
+            self.assertIn(pkg, need)
+
+    def test_the_image_installs_it(self):
+        tree_ = ET.parse(os.path.join(ROOT, "components", "normie", "tools.xml")).getroot()
+        self.assertIn("normie-tools", [p.get("name") for p in tree_.iter("package")])
+
+    def test_the_overlay_folder_only_holds_build_time_files(self):
+        found = set()
+        for d, _, files in os.walk(os.path.join(ROOT, "root")):
+            for name in files:
+                found.add(os.path.relpath(os.path.join(d, name), os.path.join(ROOT, "root")))
+        self.assertLessEqual(found, {"etc/fstab.script", "usr/share/normie/build-info"})
+
+    def test_the_package_never_lists_itself_for_the_downloaded_dependency_list(self):
+        self.assertNotIn("normie-tools", read(ROOT, "dist", "normie-deps.list"))
 
 if __name__ == "__main__":
     unittest.main()

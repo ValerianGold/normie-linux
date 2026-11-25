@@ -36,10 +36,11 @@ anything important.
   are free, but some countries restrict the patents behind them. Fedora itself does not ship them
   (`docs/DISTRIBUTING-THE-ISO.md`).
 - **No snapshots or rollback.** A one-click restore needs Btrfs snapshots, which are planned.
-- **Our own packages** (release files, logo, wallpaper, Plasma look) update through Update & Repair, from the
-  project's own package repository. **The tools themselves** (Update & Repair and its helpers) are not packaged
-  yet, so a fix to them arrives only by reinstalling from a newer ISO. The dependency list updates on an
-  installed system, because it is fetched from this repository.
+- **Our own packages** (release files, logo, wallpaper, Plasma look, and the Update & Repair tools themselves)
+  update through Update & Repair, from the project's own package repository. That holds only for systems installed
+  from 0.1.1 or later; an install from the earlier 0.1.0 files cannot receive them and needs reinstalling. Settings
+  that the installer writes into Fedora's own files at build time are the exception: they change only in a new
+  image. The dependency list updates on an installed system, because it is fetched from this repository.
 - Firmware updates are off. Release upgrades (for example Fedora 45 to 46) are not built yet.
 
 All of this is tracked in `docs/ROADMAP.md`.

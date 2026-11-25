@@ -39,6 +39,8 @@ def build():
             continue
         for p in ET.parse(f).getroot().iter("package"):
             n = p.get("name")
+            if n and n.startswith("normie-"):
+                continue                      # our own packages come from our repository, not from Fedora's
             if n and p.get("arch") in (None, "x86_64"):
                 names.add(n)
     return HEADER + "\n".join(sorted(names, key=str.lower)) + "\n"

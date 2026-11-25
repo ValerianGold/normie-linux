@@ -73,10 +73,10 @@ compromised, every user's computer would be compromised with it. Instead:
   command option) and contain only name characters; anything else is ignored. HTTPS only.
   The tests include malicious lists (`--installroot=...`, shell fragments) to prove this.
 - Names install from the repositories already configured, never from an address in the file.
-- Updates to the tools themselves (the scripts) are planned to ship as an RPM from our own
+- Updates to the tools themselves (the scripts) ship as the RPM `normie-tools` from our own
   signed repository (Milestone 3), not from raw GitHub.
 
-Set the address once the repository exists, in `root/etc/normie/update.conf`.
+Set the address once the repository exists, in `packaging/normie-tools/files/etc/normie/update.conf`.
 
 ## NVIDIA
 
@@ -110,9 +110,9 @@ it runs in demo mode (`--dry-run`): you see the whole flow and nothing changes.
 **On a real machine with an NVIDIA card, read-only** (changes nothing; run from the repo root):
 
 ```
-python3 root/usr/libexec/normie/normie-gpu detect
-python3 root/usr/libexec/normie/normie-gpu plan
-sudo python3 root/usr/libexec/normie/normie-gpu apply --dry-run     # prints the commands only
+python3 packaging/normie-tools/files/usr/libexec/normie/normie-gpu detect
+python3 packaging/normie-tools/files/usr/libexec/normie/normie-gpu plan
+sudo python3 packaging/normie-tools/files/usr/libexec/normie/normie-gpu apply --dry-run     # prints the commands only
 ```
 
 **The automated tests** (simulated GPUs and fake system commands; touch nothing real):
@@ -134,4 +134,4 @@ python3 -m unittest discover -s tests -v
 Btrfs snapshot before updating and automatic rollback; offline (reboot-time) updates; firmware
 updates; fixing the Visual C++ problem from `APP-DEPENDENCIES.md`; Fedora 45 to 46 upgrades;
 NVIDIA Optimus laptops (a second, integrated GPU); NVIDIA setup without an internet connection;
-updates to the tools themselves (Milestone 3).
+real-hardware testing of an update to `normie-tools` itself.

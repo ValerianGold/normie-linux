@@ -81,6 +81,10 @@ Also rebuild the ISO (`tools/update-iso.sh`) when you want new installs to carry
 - Copr is run by the Fedora project and has its own terms. If it ever stopped serving you, the repository address
   lives in `normie-release`, so moving to your own server is one package update, as long as the old address still works
   for that last update. Plan for a second home before there are many users.
-- Nothing here updates the **tools** (Update & Repair itself, `root/`). They are not packaged yet; that is the next
-  step (`normie-tools`). Until then a tool fix needs a new ISO.
+- The tools (Update & Repair itself) are the package `normie-tools`, so they update the same way. Two things still
+  need a new ISO: edits that `config.sh` makes to files owned by Fedora's packages (they are written once at build
+  time), and anything in `root/`, which now holds only the boot-time `fstab.script` and the generated build info.
+- `/etc` files in a package (`update.conf`, the desktop launchers) are `%config(noreplace)`: if someone edited one,
+  an update leaves their file alone and writes ours beside it as `.rpmnew`. A change that must reach everyone has to
+  go into a file under `/usr`, not `/etc`.
 - The dependency list still arrives from GitHub (`ROLLING-OUT-FIXES.md`, lane 1); that is separate and keeps working.
