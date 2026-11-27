@@ -2,7 +2,7 @@
 # It takes the place of Fedora's desktop-backgrounds-kde and provides the same capability.
 Name:           normie-backgrounds-kde
 Version:        0.1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Normie Linux default wallpaper for KDE
 License:        GPL-3.0-or-later
 BuildArch:      noarch
@@ -36,5 +36,7 @@ ln -s Normie $W/Default
 %{_datadir}/wallpapers/Default
 
 %changelog
+* Fri Nov 27 2026 Normie Linux contributors <noreply@invalid> - 0.1-2
+- New logo
 * Tue Nov 24 2026 Normie Linux contributors <noreply@invalid> - 0.1-1
 - First release.

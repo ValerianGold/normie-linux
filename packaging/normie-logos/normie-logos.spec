@@ -3,7 +3,7 @@
 # It takes the place of fedora-logos / generic-logos and provides the same capabilities.
 Name:           normie-logos
 Version:        0.1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Normie Linux icons and artwork
 License:        GPL-3.0-or-later
 BuildArch:      noarch
@@ -78,5 +78,7 @@ install -pm 0644 $F/anaconda/syslinux-vesa-splash.png %{buildroot}%{_datadir}/an
 %{_datadir}/anaconda/boot/*
 
 %changelog
+* Fri Nov 27 2026 Normie Linux contributors <noreply@invalid> - 0.1-2
+- New logo
 * Tue Nov 24 2026 Normie Linux contributors <noreply@invalid> - 0.1-1
 - First release: our logo as the system icon, Start button, installer and boot artwork.
