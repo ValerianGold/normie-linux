@@ -1,4 +1,5 @@
 import datetime
+import difflib
 import os
 import re
 import shutil
@@ -46,21 +47,26 @@ class BumpPackage(unittest.TestCase):
         self.run_tool("normie-logos", "x")
         after = self.spec("normie-logos").splitlines()
         self.assertEqual(len(after), len(before) + 2)
-        changed = [l for l in after if l not in before]
-        self.assertEqual(len(changed), 3)                        # Release, the changelog header line, the note
+        diff = [l for l in difflib.unified_diff(before, after, lineterm="", n=0) if l[:1] in "+-" and l[:3] not in ("+++", "---")]
+        added = [l for l in diff if l[0] == "+"]
+        removed = [l for l in diff if l[0] == "-"]
+        self.assertEqual(len(removed), 1)                        # the old Release line
+        self.assertEqual(len(added), 3)                          # the new Release line, the dated line, the note
+        self.assertTrue(removed[0].startswith("-Release:"))
 
     def test_two_runs_count_up(self):
+        # start from whatever the real spec says: the maintainer raises it for real, so it is not always 1
+        start = int(re.search(r"(?m)^Release:\s+(\d+)%\{\?dist\}", self.spec("normie-logos")).group(1))
         self.run_tool("normie-logos", "one")
         self.run_tool("normie-logos", "two")
-        self.assertRegex(self.spec("normie-logos"), r"(?m)^Release:\s+3%\{\?dist\}$")
+        self.assertRegex(self.spec("normie-logos"), rf"(?m)^Release:\s+{start + 2}%\{{\?dist\}}$")
 
     def test_versions_that_come_from_a_macro_are_written_out(self):
-        rc, out = self.run_tool("normie-tools", "Fix")
-        self.assertEqual(rc, 0, out)
-        self.assertRegex(self.spec("normie-tools"), r"(?m)^\* .* - 0\.1-2$")
-        rc, out = self.run_tool("normie-release", "Fix")
-        self.assertEqual(rc, 0, out)
-        self.assertRegex(self.spec("normie-release"), r"(?m)^\* .* - 45-3$")
+        for name, ver in (("normie-tools", "0.1"), ("normie-release", "45")):
+            start = int(re.search(r"(?m)^Release:\s+(\d+)%\{\?dist\}", self.spec(name)).group(1))
+            rc, out = self.run_tool(name, "Fix")
+            self.assertEqual(rc, 0, out)
+            self.assertRegex(self.spec(name), rf"(?m)^\* .* - {re.escape(ver)}-{start + 1}$")
 
     def test_bad_input_changes_nothing(self):
         snapshot = {n: self.spec(n) for n in ("normie-logos", "normie-tools")}
