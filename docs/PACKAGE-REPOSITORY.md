@@ -1,9 +1,10 @@
 # Our own package repository (milestone M3)
 
-**M3 is "milestone 3" in `ROADMAP.md`:** Normie Linux's own repository of packages. Today the four packages that
+**M3 is "milestone 3" in `ROADMAP.md`:** Normie Linux's own repository of packages. The five packages that
 make Normie Linux look and be itself (`normie-release`, `normie-logos`, `normie-backgrounds-kde`,
-`normie-lookandfeel`) only reach a computer by installing from the ISO. With a repository, Update & Repair
-installs a changed logo, wallpaper or release file on every installed system, like any other update.
+`normie-lookandfeel`) and run its tools (`normie-tools`) would otherwise only reach a computer by installing from the
+ISO. With a repository, Update & Repair installs a changed logo, wallpaper, release file or tool on every installed
+system, like any other update.
 
 We use **Copr**, a free build service run by the Fedora project. You upload source packages; Copr builds them
 for Fedora 45, **signs** them with a key of its own, and serves them as a repository. You never hold a signing key.
@@ -58,21 +59,26 @@ So the next ISO (0.1.1 alpha) should be built after the repository is set up.
    git add -A && git commit -m "Set the Copr repository address" && git push
    ```
 
-6. **Publish:** `cd ~/normie-linux && tools/publish-packages.sh`. It builds the source packages and sends the four to
+6. **Publish:** `cd ~/normie-linux && tools/publish-packages.sh`. It builds the source packages and sends the five to
    Copr, one after the other. Watch <https://copr.fedorainfracloud.org/coprs/YOURCOPRNAME/normie-linux/builds/>
-   until all four show **succeeded**.
+   until all five show **succeeded**.
 7. **Check the repository exists:** open
    `https://download.copr.fedorainfracloud.org/results/YOURCOPRNAME/normie-linux/pubkey.gpg` in a browser.
    A block of text starting `-----BEGIN PGP PUBLIC KEY BLOCK-----` means the packages are signed and served.
 
 ## Changing something later (the logo, for example)
 
-1. Replace `branding/normie-logo.svg`, then `python3 packaging/make-assets.py` (needs Pillow and rsvg-convert).
-2. In each affected spec raise `Release:` (for example `1%{?dist}` to `2%{?dist}`) and add a `%changelog` line.
-   The changelog date must be a real date.
+1. Replace `branding/normie-logo.svg` (keep it **square**: the generator renders it 1024 by 1024 and would
+   stretch anything else), then `python3 packaging/make-assets.py` (needs Pillow and rsvg-convert; on Fedora
+   `sudo dnf install python3-pillow librsvg2-tools`).
+2. `git status --short` shows which packages' files changed. For each one run
+   `tools/bump-package.sh PACKAGE "what changed"` (for example `tools/bump-package.sh normie-logos "New logo"`).
+   It raises `Release:` by one and adds the changelog line with today's date.
 3. `python3 -m unittest discover -s tests`, commit, push, then `tools/publish-packages.sh`.
-4. On an installed system, **Update & Repair** installs the new version. A few things only show after a restart
-   (the boot splash, the login screen).
+4. On an installed system, **Update & Repair** installs the new version. Icons already on screen change after the
+   next login. The boot splash is the exception: it is baked into the startup image (initramfs), which a package
+   update here does not rebuild, so it changes only when that image is next rebuilt (for example by a kernel
+   update) or on a new install.
 
 Also rebuild the ISO (`tools/update-iso.sh`) when you want new installs to carry it.
 

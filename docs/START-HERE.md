@@ -36,7 +36,7 @@ then give it 6 GB of memory, 4 CPUs and a 40 GB disk. `try-iso.sh` just does the
 **Always run Update & Repair once in the installed VM** and read its log. Every line must be free of `404`
 and of the odd version `45-1.fc45`: the repository addresses must say `45`. (This is the one thing the automated
 tests cannot see, and an ISO whose updates fail is not ready. In a terminal in the VM, `dnf repoquery --repo normie`
-must list our four packages.)
+must list our five packages.)
 
 The audit is separate: run `cd ~/normie-linux && python3 tools/audit-branding.py` in a terminal on your own
 computer, not inside the VM. It reads the build output on your disk; the VM does not have it.

@@ -17,6 +17,8 @@ Each folder holds the spec file and its sources. A spec builds from `Source0`, a
 
 - **The artwork** under `*/files/` is generated from `branding/normie-logo.svg` by `make-assets.py` and committed.
   Run it only after changing the logo (needs Pillow and `rsvg-convert`).
+- **Sending a change to installed systems:** run `tools/bump-package.sh PACKAGE "what changed"` (raises `Release:` and
+  adds the changelog line), then `tools/publish-packages.sh`. Without a higher number nothing is offered as an update.
 - **Changing a package:** edit it, then `tools/build-rpms.sh` (or just run `tools/update-iso.sh`). The build
   notices changes by itself.
 - **Tests without rpmbuild:** `tests/test_packaging.py` runs each spec's `%install` section in a scratch

@@ -154,7 +154,7 @@ sftp $SFUSER@frs.sourceforge.net                         # then, at the sftp> pr
 #   bye
 cd ~/normie-linux-out/release-$OLD
 ./ia --config-file ~/.config/ia.ini delete normie-linux-${OLD//./-} --all
-./ia --config-file ~/.config/ia.ini metadata normie-linux-${OLD//./-} --modify="description:Withdrawn: replaced by a newer release."
+./ia --config-file ~/.config/ia.ini metadata normie-linux-${OLD//./-} --modify="title:WITHDRAWN - Normie Linux $OLD (replaced)" --modify='description:<b>Withdrawn:</b> replaced. Please use the new release: <a href="https://archive.org/details/'"$IAID"'">Normie Linux '"$VER"'</a>'
 ```
 
 The Internet Archive keeps a copy of deleted files in the item's history, and the item page itself stays
