@@ -1,108 +1,61 @@
-"""The logo must stay a safe, self-contained image (no fonts, scripts or external references),
-and the letter N must stay fully intact and white, with the fire only ever drawn outside it."""
+"""The logo must stay a safe, self-contained image: square, no fonts, scripts or external references.
+
+These rules hold for any logo, so the design can change without touching the tests. (Earlier tests checked the
+pixels of a particular design; they were replaced when the logo was redrawn.)"""
 import os
+import re
 import unittest
 import xml.etree.ElementTree as ET
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 LOGO = os.path.join(ROOT, "branding", "normie-logo.svg")
 SVG = "{http://www.w3.org/2000/svg}"
-FLAME_COLOURS = {"#ffe85c", "#ffc933", "#ffa326", "#f77a1d", "#dc4c17", "#a92a14"}   # hottest to coolest
+SHAPES = {"path", "rect", "circle", "ellipse", "polygon", "polyline", "line"}
+ALLOWED = SHAPES | {"svg", "g", "defs", "title", "desc", "style", "linearGradient", "radialGradient", "stop", "clipPath"}
 
 
-def n_cells():
-    """The N on the 64x64 pixel grid: two 8-wide stems, 26 rows tall, joined by a 10-wide diagonal."""
-    c0, r0, rows, stem, diag = 15, 32, 26, 8, 10
-    right = c0 + rows - 1
-    cells = set()
-    for r in range(r0, r0 + rows):
-        for c in range(c0, c0 + stem):
-            cells.add((c, r))
-        for c in range(right, right + stem):
-            cells.add((c, r))
-        s = c0 + (r - r0)
-        for c in range(s, s + diag):
-            if c <= right + stem - 1:
-                cells.add((c, r))
-    return cells
-
-
-def cells_of(group):
-    cells = set()
-    for rect in group:
-        x, y, w, h = (int(rect.get(k)) for k in ("x", "y", "width", "height"))
-        for dx in range(w):
-            for dy in range(h):
-                cells.add((x + dx, y + dy))
-    return cells
+def number(value):
+    m = re.match(r"^\s*(-?\d+(?:\.\d+)?)\s*(px)?\s*$", value or "")
+    return float(m.group(1)) if m else None
 
 
 class Logo(unittest.TestCase):
     def setUp(self):
         self.root = ET.parse(LOGO).getroot()
-        self.groups = [g for g in self.root.iter(SVG + "g")]
+        with open(LOGO, encoding="utf-8") as fh:
+            self.text = fh.read()
 
-    def white_group(self):
-        group = [g for g in self.groups if g.get("fill") == "#ffffff"]
-        self.assertEqual(len(group), 1)
-        return group[0]
-
-    def test_is_a_square_svg_with_a_title(self):
+    def test_is_an_svg_with_something_drawn(self):
         self.assertEqual(self.root.tag, SVG + "svg")
-        x, y, w, h = [float(v) for v in self.root.get("viewBox").split()]
-        self.assertEqual((x, y), (0, 0))
-        self.assertEqual(w, h)
-        self.assertTrue(self.root.find(SVG + "title") is not None)
+        self.assertTrue([el for el in self.root.iter() if el.tag.replace(SVG, "") in SHAPES])
 
-    def test_only_plain_shapes_are_used(self):
-        allowed = {"svg", "title", "defs", "linearGradient", "stop", "rect", "g", "polygon", "path"}
+    def test_is_square_so_the_icons_are_not_stretched(self):
+        parts = re.split(r"[\s,]+", (self.root.get("viewBox") or "").strip())
+        self.assertEqual(len(parts), 4, "the SVG needs a viewBox")
+        w, h = float(parts[2]), float(parts[3])
+        self.assertGreater(w, 0)
+        self.assertAlmostEqual(w, h, delta=0.01, msg=f"the viewBox is {w} by {h}; make it square (add empty margin)")
+        sw, sh = number(self.root.get("width")), number(self.root.get("height"))
+        if sw is not None and sh is not None:
+            self.assertAlmostEqual(sw, sh, delta=0.01)
+
+    def test_only_plain_drawing_elements_are_used(self):
         for el in self.root.iter():
-            self.assertIn(el.tag.replace(SVG, ""), allowed, el.tag)
+            self.assertIn(el.tag.replace(SVG, ""), ALLOWED, el.tag)
 
     def test_no_text_fonts_scripts_or_external_references(self):
-        with open(LOGO) as fh:
-            text = fh.read().lower()
-        for bad in ("<text", "font-", "<script", "<image", "href", "http://www.w3.org/1999/xlink",
-                    "javascript:", "<foreignobject", "onload", "@import", "url(http"):
-            self.assertNotIn(bad, text, bad)
+        low = self.text.lower()
+        for bad in ("<text", "font-", "<script", "<image", "href", "javascript:", "<foreignobject",
+                    "onload", "@import", "url(http", "<!entity", "<use"):
+            self.assertNotIn(bad, low, bad)
 
-    def test_every_gradient_that_is_used_is_defined(self):
-        defined = {g.get("id") for g in self.root.iter(SVG + "linearGradient")}
-        used = set()
-        for el in self.root.iter():
-            f = el.get("fill", "")
-            if f.startswith("url(#"):
-                used.add(f[5:-1])
-        self.assertTrue(used)
-        self.assertLessEqual(used, defined)
+    def test_every_gradient_or_clip_that_is_used_is_defined(self):
+        defined = {el.get("id") for el in self.root.iter() if el.get("id")}
+        for ref in re.findall(r"url\(\s*#([^)\s]+)\s*\)", self.text):
+            self.assertIn(ref, defined, f"url(#{ref}) points at nothing")
 
-    def test_the_n_is_exactly_the_whole_letter_and_white(self):
-        group = self.white_group()
-        self.assertTrue(all(r.tag == SVG + "rect" for r in group))
-        self.assertEqual(cells_of(group), n_cells())
-
-    def test_the_fire_never_touches_the_letter(self):
-        n = n_cells()
-        flames = [g for g in self.groups if g.get("fill") in FLAME_COLOURS]
-        self.assertTrue(flames)
-        fire = set()
-        for g in flames:
-            cells = cells_of(g)
-            self.assertFalse(cells & n, "flame pixels overlap the N")
-            self.assertFalse(cells & fire, "two flame colours overlap")
-            fire |= cells
-        # the fire really is on top: it rises above the top of the N
-        self.assertLess(min(r for _, r in fire), min(r for _, r in n) - 12)
-
-    def test_everything_stays_inside_the_canvas(self):
-        for g in self.groups:
-            for c, r in cells_of(g):
-                self.assertTrue(0 <= c < 64 and 0 <= r < 64, (c, r))
-
-    def test_no_other_group_draws_white(self):
-        for g in self.groups:
-            if g.get("fill") != "#ffffff":
-                self.assertIn(g.get("fill"), FLAME_COLOURS)
+    def test_is_small_enough_to_ship_everywhere(self):
+        self.assertLess(os.path.getsize(LOGO), 200 * 1024)
 
 
 if __name__ == "__main__":

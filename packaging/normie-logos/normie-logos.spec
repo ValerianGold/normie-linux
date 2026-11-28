@@ -1,5 +1,5 @@
 # Normie Linux's logos: the start-menu button, system icon, installer and boot artwork.
-# Our own artwork only (branding/normie-logo.svg); nothing here comes from Fedora.
+# The project's logo (branding/normie-logo.svg; source and licence in NOTICE.md); nothing here comes from Fedora.
 # It takes the place of fedora-logos / generic-logos and provides the same capabilities.
 Name:           normie-logos
 Version:        0.1
@@ -17,7 +17,7 @@ Conflicts:      generic-logos
 
 %description
 The Normie Linux logo as the system icon, the Start-menu button (start-here), the installer artwork
-and the boot-splash watermark. The artwork is original to this project.
+and the boot-splash watermark. The artwork is the Normie Linux logo; nothing in it comes from Fedora.
 
 %prep
 %setup -q -c

@@ -1,30 +1,34 @@
 # Normie Linux logo
 
-`normie-logo.svg` is the logo: a white letter **N** on a dark rounded badge, wrapped in shaded pixel-art flames
-(16/32-bit style, with six heat shades from yellow to dark red). The letter itself is the heat source: the fire is hottest
-right against every outer edge and cools outwards, so the sides and the top burn as one continuous flame that
-narrows towards the top. Tongues of flame also curl up the sides, with a darker crease where each one meets
-the body of the fire.
+`normie-logo.svg` is the logo. The system uses it through the `normie-logos` package for the Start button, the boot and
+installer screens, `/etc/os-release` (`LOGO=`), the About page and the GitHub page. It contains no Fedora artwork.
 
-- The N is always fully intact and white. The flames are drawn around and above it, never over it.
-  `tests/test_branding.py` checks this pixel by pixel, so a later edit cannot quietly damage the letter.
-- It is drawn on a 64 x 64 pixel grid using only plain rectangles (no fonts, scripts or outside references),
-  so it renders the same everywhere and is safe to ship. It stays readable down to about 24 px.
-- The dark badge keeps the white N visible on both light and dark backgrounds.
-- The art is original and is the project's own (no Fedora artwork is used).
+Source and licence: see `NOTICE.md`.
 
-## Where it is used
+## Rules for the file
 
-The Start button (Kickoff launcher), the boot and installer screens, `/etc/os-release` (`LOGO=`), the About page
-and the GitHub page. The system uses it through the `normie-logos` package: after changing the SVG run
-`python3 packaging/make-assets.py` to regenerate the icons, wallpaper and installer images (a test fails
-until you do). Sizes come from the SVG, for example on Fedora with librsvg:
+`tests/test_branding.py` checks these, whatever the design looks like:
+
+- **Square.** The `viewBox` must be square (for a tall or wide drawing, add empty margin on the short sides). The icons
+  are rendered 1024 by 1024 and a non-square file would come out stretched.
+- **Plain shapes only**: paths, rectangles, circles, polygons, gradients and a `<style>` block. No text or fonts (they
+  render differently on every computer), scripts, images, links or outside references. That keeps it safe to ship.
+- Under 200 KB.
+
+A transparent background is fine. Check the result at 22, 48 and 256 px on both a light and a dark background before
+committing.
+
+## Changing it
+
+1. Replace `branding/normie-logo.svg`.
+2. `python3 packaging/make-assets.py` regenerates the icons, installer images and boot artwork (needs Pillow and
+   `rsvg-convert`; a test fails until you do).
+3. `python3 -m unittest discover -s tests`.
+4. To reach systems that are already installed, raise the packages' versions with `tools/bump-package.sh` and run
+   `tools/publish-packages.sh` (`docs/PACKAGE-REPOSITORY.md`, "Changing something later").
+
+Sizes can also be made by hand, for example on Fedora with librsvg:
 
 ```
 rsvg-convert -w 256 -h 256 branding/normie-logo.svg -o normie-logo-256.png
 ```
-
-## Changing it
-
-Edit the SVG, keep the N group (`<g fill="#ffffff">`) exactly as it is, run the tests
-(`python3 -m unittest discover -s tests`), and look at the result at 22, 48 and 256 px before committing.

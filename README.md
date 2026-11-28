@@ -1,4 +1,4 @@
-<p align="center"><img src="branding/normie-logo.svg" width="160" alt="Normie Linux logo: a white letter N wrapped in flames"></p>
+<p align="center"><img src="branding/normie-logo.svg" width="160" alt="Normie Linux logo"></p>
 
 # Normie Linux
 

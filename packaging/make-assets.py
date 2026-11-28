@@ -6,7 +6,7 @@ committed. Run it only after changing the logo:
 
     python3 packaging/make-assets.py
 
-Everything written here is derived from our own logo; nothing is taken from Fedora's artwork.
+Everything written here is derived from branding/normie-logo.svg; nothing is taken from Fedora's artwork.
 """
 import os
 import random
@@ -23,7 +23,7 @@ BACKGROUNDS = os.path.join(ROOT, "packaging", "normie-backgrounds-kde", "files")
 LNF = os.path.join(ROOT, "packaging", "normie-lookandfeel", "files")
 
 ICON_SIZES = (16, 22, 24, 32, 36, 48, 64, 96, 128, 256)
-NAVY_TOP, NAVY_BOTTOM = (28, 34, 54), (11, 14, 24)         # the logo badge colours
+NAVY_TOP, NAVY_BOTTOM = (28, 34, 54), (11, 14, 24)         # dark navy used behind the logo in the generated images
 EMBER = [(255, 232, 92), (255, 201, 51), (255, 163, 38), (247, 122, 29), (220, 76, 23), (169, 42, 20)]
 
 
