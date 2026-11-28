@@ -1,4 +1,4 @@
-# Normie Linux 0.1.1 alpha
+# Normie Linux 0.1.2 alpha
 
 This is the first public release of Normie Linux: the **recipe** that builds it (this repository) and a ready-made
 **ISO**. The ISO is about 5 GB, too big for a GitHub release, so it is hosted on **SourceForge** and the

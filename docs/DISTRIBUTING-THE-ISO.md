@@ -59,12 +59,12 @@ copy of the ISO and its checksum yourself. Many people use two places so one goi
 
 ## Step by step
 
-Set these once per release (the example is the 0.1.1 alpha). `SFUSER` is your SourceForge username and
+Set these once per release (the example is the 0.1.2 alpha). `SFUSER` is your SourceForge username and
 `SFPROJECT` the project's unix name (`normie-linux`). Everything is typed in a terminal on the computer that
 built the ISO, and the same terminal window must be used for all the steps, because they share these names:
 
 ```
-VER=0.1.1-alpha
+VER=0.1.2-alpha
 SFUSER=your-sourceforge-username
 SFPROJECT=normie-linux
 IAID=normie-linux-${VER//./-}            # Internet Archive names allow no periods
@@ -144,7 +144,7 @@ reusing the old one: a reused name means two different files under one checksum.
 
 ```
 cd ~/normie-linux
-OLD=0.1.0-alpha
+OLD=0.1.1-alpha
 gh release delete "v$OLD" --cleanup-tag --yes          # the GitHub release and its tag
 git tag -d "v$OLD"                                       # your local copy of the tag
 sftp $SFUSER@frs.sourceforge.net                         # then, at the sftp> prompt, one line each:
