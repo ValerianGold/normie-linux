@@ -3,25 +3,22 @@
 Normie Linux: Update & Repair window (PyQt6). A thin front end: all real work is done by
 /usr/libexec/normie/normie-update, started through pkexec (one administrator password prompt).
 
-  normie-update-gui              the normal window with the big button
-  normie-update-gui --first-run  started at login: if an NVIDIA card needs its driver,
-                                 offer to set it up; otherwise exit without showing anything
+  normie-update-gui              the normal window with the big button. Its full run also checks and sets up
+                                 the NVIDIA driver, so there is no separate first-login prompt for it
+  normie-update-gui --first-run  does nothing and exits (an older login entry may still call it)
 
 In the live session (before installing) the window runs in demo mode: it shows the whole
 flow but runs the backend with --dry-run, so nothing is changed.
 """
 import os
-import subprocess
 import sys
 
 from PyQt6.QtCore import QProcess, Qt
-from PyQt6.QtWidgets import (QApplication, QLabel, QMessageBox, QPlainTextEdit, QProgressBar,
+from PyQt6.QtWidgets import (QApplication, QLabel, QPlainTextEdit, QProgressBar,
                              QPushButton, QVBoxLayout, QWidget)
 
 LIBEXEC = "/usr/libexec/normie"
 UPDATE = f"{LIBEXEC}/normie-update"
-GPU = f"{LIBEXEC}/normie-gpu"
-DISMISSED = os.path.expanduser("~/.config/normie/gpu-prompt-dismissed")
 
 
 def is_live():
@@ -34,7 +31,7 @@ def is_live():
 
 
 class Window(QWidget):
-    def __init__(self, auto_gpu=False):
+    def __init__(self):
         super().__init__()
         self.setWindowTitle("Update & Repair")
         self.setMinimumWidth(520)
@@ -94,9 +91,6 @@ class Window(QWidget):
         self.log.setMinimumHeight(180)
         self.log.hide()
         lay.addWidget(self.log)
-
-        if auto_gpu:
-            self.start("gpu")
 
     def toggle_log(self, on):
         self.log.setVisible(on)
@@ -174,38 +168,11 @@ class Window(QWidget):
                 self.status.setText(self.status.text() + " Restart to finish.")
 
 
-def first_run():
-    if is_live() or os.path.exists(DISMISSED):
-        return None
-    try:
-        r = subprocess.run([GPU, "plan", "--quiet"], capture_output=True, text=True, timeout=30)
-    except (OSError, subprocess.TimeoutExpired):
-        return None
-    if r.returncode != 10:                       # 10 = there is something to do
-        return None
-    box = QMessageBox()
-    box.setWindowTitle("Graphics driver")
-    box.setText("An NVIDIA graphics card was found.")
-    box.setInformativeText("Install its driver now for the best performance? It takes a few minutes "
-                           "and needs an internet connection. You will be asked to restart afterwards.")
-    box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-    box.button(QMessageBox.StandardButton.Yes).setText("Install now")
-    box.button(QMessageBox.StandardButton.No).setText("Not now")
-    if box.exec() == QMessageBox.StandardButton.Yes:
-        return Window(auto_gpu=True)
-    os.makedirs(os.path.dirname(DISMISSED), exist_ok=True)
-    open(DISMISSED, "w").close()                 # do not ask again; the main button still handles it
-    return None
-
-
 def main():
+    if "--first-run" in sys.argv:                # retired: kept so an old login entry does nothing
+        return 0
     app = QApplication(sys.argv)
-    if "--first-run" in sys.argv:
-        win = first_run()
-        if win is None:
-            return 0
-    else:
-        win = Window()
+    win = Window()
     win.show()
     return app.exec()
 

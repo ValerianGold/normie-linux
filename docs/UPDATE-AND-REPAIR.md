@@ -95,6 +95,11 @@ Rules it follows: unknown hardware means do nothing; a driver is only swapped (w
 key is created **before** modules are built so they are signed; if the newest kernel has no
 working driver yet, the previous kernel stays the default.
 
+There is **no separate prompt** at first login. Earlier builds asked "An NVIDIA card was found, install the driver?" and
+then ran only the graphics step, which looked like a full update but was not, so people had to run the app twice. The one
+button now does everything, the driver included, in a single run. The cost: a new NVIDIA install uses the open-source
+driver until the button is pressed once (the daily reminder only nudges after 14 days).
+
 Secure Boot cannot be fully silent. The window shows a one-time password; after the restart
 a blue screen asks the user to "Enroll MOK" and type it.
 

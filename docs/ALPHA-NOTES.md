@@ -13,7 +13,7 @@ anything important.
 - Builds with KIWI on Fedora 45; the ISO boots to a live KDE Plasma desktop and installs to disk.
 - **Update & Repair:** one application that updates Fedora packages, Flathub apps and RPM Fusion packages in one
   go, re-applies the project's dependency list, and shows progress and details.
-- **NVIDIA graphics driver** detected and set up automatically (the current driver branch, for Turing and newer cards).
+- **NVIDIA graphics driver** detected and set up by Update & Repair's normal run (the current driver branch, for Turing and newer cards). There is no separate prompt at first login: until you press the button once, an NVIDIA card runs on the open-source driver.
 - **Software center (Discover)** shows Fedora, Flathub, RPM Fusion, and the third-party repositories that
   Fedora offers (Google Chrome, Steam, NVIDIA). Chrome and Steam install from it.
 - **Video and audio:** H.264 and H.265 play with sound.

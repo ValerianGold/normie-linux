@@ -12,6 +12,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 import xml.etree.ElementTree as ET
@@ -514,6 +515,31 @@ class ToolsPackage(unittest.TestCase):
             self.assertTrue(os.access(os.path.join(d, name), os.X_OK), name)
         self.assertFalse(os.access(os.path.join(d, "normie-lib.sh"), os.X_OK))      # sourced, never run
 
+    def test_there_is_no_separate_nvidia_prompt_at_first_login(self):
+        # it ran a graphics-only pass and looked like a full update; the one button now does everything
+        self.assertFalse(os.path.exists(os.path.join(self.root, "etc/xdg/autostart")))
+        gui = read(self.root, "usr/libexec/normie/normie-update-gui")
+        for gone in ("An NVIDIA graphics card was found", "gpu-prompt-dismissed", "def first_run", "auto_gpu"):
+            self.assertNotIn(gone, gui)
+        self.assertNotIn("first-run", read(self.root, "usr/lib/systemd/user/normie-remind.service"))
+
+    def test_an_old_first_run_login_entry_opens_nothing(self):
+        stubs = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, stubs, ignore_errors=True)
+        os.makedirs(stubs + "/PyQt6")
+        open(stubs + "/PyQt6/__init__.py", "w").close()
+        for mod in ("QtCore", "QtWidgets"):
+            with open(f"{stubs}/PyQt6/{mod}.py", "w") as fh:
+                fh.write("def __getattr__(name):\n    return type(name, (object,), {})\n")
+        with open(stubs + "/PyQt6/QtWidgets.py", "w") as fh:         # a window or an app being made is a failure
+            fh.write("def __getattr__(name):\n    if name == 'QApplication':\n"
+                     "        def made(*a, **k):\n            raise SystemExit(99)\n        return made\n"
+                     "    return type(name, (object,), {})\n")
+        gui = os.path.join(self.root, "usr/libexec/normie/normie-update-gui")
+        r = subprocess.run([sys.executable, gui, "--first-run"], env={"PYTHONPATH": stubs, "PATH": os.environ["PATH"]},
+                           capture_output=True, text=True, timeout=30)
+        self.assertEqual(r.returncode, 0, r.stderr)
+
     def test_the_services_are_enabled_by_the_package_itself(self):
         links = {"etc/systemd/system/multi-user.target.wants/normie-sources.service":
                      "/usr/lib/systemd/system/normie-sources.service",
@@ -526,14 +552,13 @@ class ToolsPackage(unittest.TestCase):
             self.assertTrue(os.path.exists(self.root + target), target)
 
     def test_settings_and_desktop_files_in_etc_are_kept_when_the_user_changed_them(self):
-        for path in ("/etc/normie/update.conf", "/etc/skel/Desktop/normie-update.desktop",
-                     "/etc/xdg/autostart/normie-first-run.desktop"):
+        for path in ("/etc/normie/update.conf", "/etc/skel/Desktop/normie-update.desktop"):
             self.assertIn(f"%config(noreplace) {path}", "\n".join(self.spec.sections["files"]).replace("%{_sysconfdir}", "/etc"))
 
     def test_what_the_desktop_files_and_polkit_name_is_in_the_package(self):
         text = ""
         for rel in ("usr/share/applications/normie-update.desktop", "etc/skel/Desktop/normie-update.desktop",
-                    "etc/xdg/autostart/normie-first-run.desktop", "usr/share/polkit-1/actions/org.normielinux.update.policy",
+                    "usr/share/polkit-1/actions/org.normielinux.update.policy",
                     "usr/lib/systemd/system/normie-sources.service", "usr/lib/systemd/user/normie-remind.service"):
             text += read(self.root, rel)
         for path in sorted(set(re.findall(r"/usr/libexec/normie/[\w.-]+", text))):

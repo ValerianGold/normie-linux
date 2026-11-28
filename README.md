@@ -19,7 +19,7 @@ users never have to open a terminal.
 - **One "Update & Repair" button.** Runs a full system upgrade with no questions asked, keeps common dependencies installed and current, and rolls back automatically if something goes wrong.
 - **Runs the software people actually use**, including older programs and 32-bit applications, and Windows programs through Wine.
 - **Dependency-complete.** We would rather ship a few libraries too many than make a user hunt for a missing one. Size optimization matters, but completeness wins.
-- **Graphics drivers handled automatically**, including NVIDIA, as part of first setup.
+- **Graphics drivers handled by the same button**, including NVIDIA: the first Update & Repair run detects the card and sets up its driver.
 - **Fedora underneath.** Updates come from Fedora's repositories (plus RPM Fusion and our own), but this is an independent project.
 
 ## Not affiliated with Fedora

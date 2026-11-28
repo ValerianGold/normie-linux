@@ -1,9 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Normie Linux first-run check
-Comment=Offers to install the NVIDIA graphics driver when an NVIDIA card is found
-Exec=/usr/libexec/normie/normie-update-gui --first-run
-Terminal=false
-OnlyShowIn=KDE;
-X-KDE-autostart-after=panel
-NoDisplay=true
